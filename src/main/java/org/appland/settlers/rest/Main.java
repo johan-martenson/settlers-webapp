@@ -15,11 +15,7 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-        try {
-            new Main().run();
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
+        new Main().run();
     }
 
     public void run() throws Exception {

@@ -45,7 +45,6 @@ import org.json.simple.JSONObject;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -58,13 +57,10 @@ public class Utils {
         this.idManager = idManager;
     }
 
-    public JSONArray gamesToJson(Map<Integer, GameMap> gamesMap) {
+    public JSONArray gamesToJson(List<GameMap> games) {
         JSONArray jsonGames = new JSONArray();
 
-        for (Map.Entry<Integer, GameMap> entry : gamesMap.entrySet()) {
-            int id = entry.getKey();
-            GameMap map = entry.getValue();
-
+        for (GameMap map : games) {
             JSONObject jsonGame = gameToJson(map);
 
             jsonGames.add(jsonGame);
@@ -486,7 +482,6 @@ public class Utils {
             jsonWorker.put("previous", pointToJson(worker.getLastPoint()));
 
             try {
-                JSONObject jsonNext = new JSONObject();
                 jsonWorker.put("next", pointToJson(worker.getNextPoint()));
 
             } catch(Exception e) {

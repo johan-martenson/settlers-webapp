@@ -2,7 +2,7 @@ package org.appland.settlers.rest.resource;
 
 import java.util.HashMap;
 
-public class IdManager {
+class IdManager {
 
     private final HashMap<Object, Integer> objectToId;
     private int ids;

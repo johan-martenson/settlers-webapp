@@ -32,7 +32,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,16 +46,16 @@ public class SettlersAPI {
     @Context
     ServletContext context;
 
-    private Map<Integer, GameMap> gamesMap;
+    private final List<GameMap> games;
     private JSONParser parser;
 
     public SettlersAPI() throws Exception {
-        gamesMap = new HashMap<>();
+        games = new ArrayList<>();
 
         /* Pre-populate with one game */
         List<Player> players = new ArrayList<>();
         players.add(new Player("johan", Color.BLUE));
-        gamesMap.put(1, new GameMap(players, 300, 300));
+        games.add(new GameMap(players, 300, 300));
 
         /* */
         idManager = new IdManager();
@@ -66,16 +65,9 @@ public class SettlersAPI {
     }
 
     @GET
-    @Path("/message/{msg}")
-    public Response getMessage(@PathParam("msg") String msg) {
-        String result = "Hello!";
-        return Response.status(200).entity(result).build();
-    }
-
-    @GET
     @Path("/games")
     public Response getGames() {
-        JSONArray jsonGames = utils.gamesToJson(gamesMap);
+        JSONArray jsonGames = utils.gamesToJson(games);
 
         return Response.status(200).entity(jsonGames.toJSONString()).build();
     }
@@ -95,6 +87,8 @@ public class SettlersAPI {
 
         GameMap map = utils.jsonToGame(jsonGame);
 
+        games.add(map);
+
         return Response.status(200).entity(body).build();
     }
 
@@ -109,12 +103,13 @@ public class SettlersAPI {
     }
 
     @GET
-    @Path("/debug")
-    public Response getDebug() {
-        //String result = context.getAttribute("gameTicker").toString();
-        //String result = context.toString() + context.getAttribute("gameTicker");
-        String result = "keso";
-        return Response.status(200).entity(result).build();
+    @Path("/healthz")
+    public Response getHealth() {
+        JSONObject response = new JSONObject();
+
+        response.put("health", "healthy");
+
+        return Response.status(200).entity(response.toJSONString()).build();
     }
 
     @GET
@@ -221,10 +216,9 @@ public class SettlersAPI {
         Player player = (Player) idManager.getObject(playerId);
         JSONObject jsonHouse = (JSONObject) parser.parse(body);
 
-        String type = (String) jsonHouse.get("type");
         Point point = utils.jsonToPoint(jsonHouse);
 
-        Building building = (Building) utils.buildingFactory(jsonHouse, player);
+        Building building = utils.buildingFactory(jsonHouse, player);
 
         map.placeBuilding(building, point);
 

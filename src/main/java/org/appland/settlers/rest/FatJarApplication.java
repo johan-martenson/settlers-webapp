@@ -9,9 +9,6 @@ import org.appland.settlers.rest.resource.SettlersAPI;
 
 public class FatJarApplication extends Application {
 
-    public FatJarApplication() {
-    }
-
     /*
      *
      * public Set<Class<?>> getClasses() { HashSet<Class<?>> set = new
@@ -21,7 +18,7 @@ public class FatJarApplication extends Application {
 
     @Override
     public Set<Object> getSingletons() {
-        HashSet<Object> set = new HashSet<Object>();
+        HashSet<Object> set = new HashSet<>();
         //set.add(new MessageResource());
         try {
             set.add(new SettlersAPI());
