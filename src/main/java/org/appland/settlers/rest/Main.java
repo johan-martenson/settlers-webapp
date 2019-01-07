@@ -8,7 +8,7 @@ import org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher;
 
 public class Main {
 
-    static final String APPLICATION_PATH = "/api";
+    static final String APPLICATION_PATH = "/*";
     static final String CONTEXT_ROOT = "/";
 
     public Main() {
@@ -34,7 +34,8 @@ public class Main {
         final ServletHolder restEasyServlet = new ServletHolder(new HttpServletDispatcher());
         restEasyServlet.setInitParameter("resteasy.servlet.mapping.prefix", APPLICATION_PATH);
         restEasyServlet.setInitParameter("javax.ws.rs.Application","org.appland.settlers.rest.FatJarApplication");
-        context.addServlet(restEasyServlet, APPLICATION_PATH + "/*");
+        //context.addServlet(restEasyServlet, APPLICATION_PATH + "/*");
+        context.addServlet(restEasyServlet, APPLICATION_PATH);
 
         // Setup the DefaultServlet at "/".
         final ServletHolder defaultServlet = new ServletHolder(new DefaultServlet());
