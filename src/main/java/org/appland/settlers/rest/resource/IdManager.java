@@ -30,4 +30,20 @@ class IdManager {
     Object getObject(int id) {
         return idToObject.get(id);
     }
+
+    void remove(Object gameObject) {
+        int id = objectToId.get(gameObject);
+        objectToId.remove(gameObject);
+        idToObject.remove(id);
+    }
+
+    void updateObject(Object oldObject, Object updatedObject) {
+        int id = objectToId.get(oldObject);
+
+        objectToId.remove(oldObject);
+        idToObject.remove(id);
+
+        idToObject.put(id, updatedObject);
+        objectToId.put(updatedObject, id);
+    }
 }

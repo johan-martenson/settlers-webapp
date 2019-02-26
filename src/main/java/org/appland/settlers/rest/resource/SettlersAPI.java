@@ -1,9 +1,11 @@
 package org.appland.settlers.rest.resource;
 
+import org.appland.settlers.maps.MapFile;
 import org.appland.settlers.model.Building;
 import org.appland.settlers.model.Crop;
 import org.appland.settlers.model.Flag;
 import org.appland.settlers.model.GameMap;
+import org.appland.settlers.model.Headquarter;
 import org.appland.settlers.model.Player;
 import org.appland.settlers.model.Point;
 import org.appland.settlers.model.Road;
@@ -13,9 +15,11 @@ import org.appland.settlers.model.Stone;
 import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.WildAnimal;
 import org.appland.settlers.model.Worker;
+import org.appland.settlers.rest.GameTicker;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import javax.servlet.ServletContext;
 import javax.ws.rs.Consumes;
@@ -30,7 +34,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,27 +44,53 @@ import java.util.Set;
 @Produces(MediaType.APPLICATION_JSON)
 public class SettlersAPI {
 
+    public final static String MAP_FILE_LIST = "mapFileList";
+    public static final String GAME_TICKER = "gameTicker";
+
     private final IdManager idManager;
     private final Utils utils;
     @Context
     ServletContext context;
 
     private final List<GameMap> games;
-    private JSONParser parser;
+    private final JSONParser parser;
+    private final List<GamePlaceholder> gamePlaceholders;
 
-    public SettlersAPI() throws Exception {
+    public SettlersAPI() {
         games = new ArrayList<>();
 
-        /* Pre-populate with one game */
-        List<Player> players = new ArrayList<>();
-        players.add(new Player("johan", Color.BLUE));
-        games.add(new GameMap(players, 300, 300));
-
-        /* */
         idManager = new IdManager();
         utils = new Utils(idManager);
 
         parser = new JSONParser();
+        gamePlaceholders = new ArrayList<>();
+    }
+
+    @GET
+    @Path("/maps")
+    public Response getMaps() {
+
+        /* Get the list of map files from the servlet context */
+        List<MapFile> mapFiles = (List<MapFile>) context.getAttribute(MAP_FILE_LIST);
+
+        /* Return the list of map files as JSON documents */
+        return Response.status(200).entity(utils.mapFilesToJson(mapFiles).toJSONString()).build();
+    }
+
+    @GET
+    @Path("/maps/{mapId}")
+    public Response getMap(@PathParam("mapId") String mapId) {
+        MapFile mapFile = (MapFile) idManager.getObject(Integer.parseInt(mapId));
+
+        return Response.status(200).entity(utils.mapFileToJson(mapFile).toJSONString()).build();
+    }
+
+    @GET
+    @Path("/maps/{mapId}/terrain")
+    public Response getTerrainForMap(@PathParam("mapId") String id) throws Exception {
+        MapFile mapFile = (MapFile)idManager.getObject(Integer.parseInt(id));
+
+        return Response.status(200).entity(utils.mapFileTerrainToJson(mapFile).toJSONString()).build();
     }
 
     @GET
@@ -69,52 +98,253 @@ public class SettlersAPI {
     public Response getGames() {
         JSONArray jsonGames = utils.gamesToJson(games);
 
+        jsonGames.addAll(utils.gamePlaceholdersToJson(gamePlaceholders));
+
         return Response.status(200).entity(jsonGames.toJSONString()).build();
+    }
+
+    @DELETE
+    @Path("/maps/{mapId}")
+    public Response deleteMap() {
+
+        return Response.status(405).build();
     }
 
     @GET
     @Path("/games/{id}")
     public Response getGame(@PathParam("id") int id) {
-        JSONObject jsonGame = utils.gameToJson((GameMap)idManager.getObject(id));
 
-        return Response.status(200).entity(jsonGame.toJSONString()).build();
+        Object gameObject = idManager.getObject(id);
+
+        /* Return 404 if the game doesn't exist */
+        if (gameObject == null) {
+            return Response.status(404).build();
+        }
+
+        /* Return the game as a JSON document */
+        if (gameObject instanceof GameMap) {
+            JSONObject jsonGame = utils.gameToJson((GameMap)gameObject);
+
+            return Response.status(200).entity(jsonGame.toJSONString()).build();
+        } else {
+            JSONObject jsonGame = utils.gamePlaceholderToJson((GamePlaceholder)gameObject);
+
+            return Response.status(200).entity(jsonGame.toJSONString()).build();
+        }
     }
 
     @POST
     @Path("/games")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response createGame(String body) throws Exception {
-        JSONObject jsonGame = (JSONObject)parser.parse(body);
 
-        GameMap map = utils.jsonToGame(jsonGame);
+        /* Return 400 (bad request) if the body is empty */
+        if (body.equals("")) {
+            System.out.println("Empty body");
 
-        games.add(map);
+            return Response.status(400).build();
+        }
 
-        return Response.status(200).entity(body).build();
+        JSONObject jsonGame = (JSONObject) parser.parse(body);
+
+        /* Create a real game instance if the game is immediately started */
+        if (jsonGame.containsKey("status") && jsonGame.get("status").equals("STARTED")) {
+
+            return null;
+        } else {
+
+            /* Create a placeholder if there are missing attributes */
+            GamePlaceholder gamePlaceholder = new GamePlaceholder();
+
+            if (jsonGame.containsKey("name")) {
+                gamePlaceholder.setName((String) jsonGame.get("name"));
+            }
+
+            if (jsonGame.containsKey("players")) {
+                gamePlaceholder.setPlayers(utils.jsonToPlayers((JSONArray) jsonGame.get("players")));
+            }
+
+            if (jsonGame.containsKey("mapId")) {
+                String mapId = (String) jsonGame.get("mapId");
+                gamePlaceholder.setMap((MapFile) idManager.getObject(Integer.parseInt(mapId)));
+            }
+
+            gamePlaceholders.add(gamePlaceholder);
+
+            return Response.status(201).entity(utils.gamePlaceholderToJson(gamePlaceholder).toJSONString()).build();
+        }
+
+        //return Response.status(201).entity("").build();
+    }
+
+    @PATCH
+    @Path("/games/{gameId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response modifyGame(@PathParam("gameId") String gameId, String body) throws Exception {
+        Object gameObject = idManager.getObject(Integer.parseInt(gameId));
+
+        JSONObject jsonUpdates = (JSONObject) parser.parse(body);
+
+        if (jsonUpdates.containsKey("mapId") && gameObject instanceof GamePlaceholder) {
+            String updatedMapFileId = (String) jsonUpdates.get("mapId");
+
+            MapFile updatedMapFile = (MapFile) idManager.getObject(Integer.parseInt(updatedMapFileId));
+
+            if (gameObject instanceof GamePlaceholder) {
+                GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+
+                gamePlaceholder.setMap(updatedMapFile);
+
+                return Response.status(200).entity(utils.gamePlaceholderToJson(gamePlaceholder).toJSONString()).build();
+            } else {
+                return Response.status(500).build();
+            }
+        }
+
+        if (jsonUpdates.containsKey("status") && gameObject instanceof GamePlaceholder) {
+            String updatedStatus = (String) jsonUpdates.get("status");
+
+            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+
+            if (updatedStatus.equals("STARTED")) {
+
+                /* Convert the game placeholder to a game map */
+                GameMap map = utils.gamePlaceholderToGame(gamePlaceholder);
+                games.add(map);
+                gamePlaceholders.remove(gamePlaceholder);
+
+                idManager.updateObject(gameObject, map);
+
+                /* Place a headquarter for each player */
+                List<Player> players = map.getPlayers();
+                List<Point> startingPoints = map.getStartingPoints();
+
+                for (int i = 0; i < startingPoints.size(); i++) {
+
+                    if (i == players.size()) {
+                        break;
+                    }
+
+                    map.placeBuilding(new Headquarter(players.get(i)), startingPoints.get(i));
+                }
+
+                /* Start the time for the game by adding it to the game ticker */
+                GameTicker gameTicker = (GameTicker) context.getAttribute(GAME_TICKER);
+
+                gameTicker.startGame(map);
+
+                return Response.status(200).entity(utils.gameToJson(map).toJSONString()).build();
+            }
+
+            return Response.status(405).build();
+        }
+
+
+        /* Return bad request (400) if there is no mapFileId included */
+        return Response.status(400).build();
+    }
+
+    @DELETE
+    @Path("/games/{gameId}")
+    public Response deleteGame(@PathParam("gameId") String gameId) {
+        Object gameObject = idManager.getObject(Integer.parseInt(gameId));
+
+        /* Return 404 if the game doesn't exist */
+        if (gameObject == null) {
+            return Response.status(404).build();
+        }
+
+        if (gameObject instanceof GamePlaceholder) {
+            gamePlaceholders.remove(gameObject);
+        } else {
+            games.remove(gameObject);
+        }
+
+        /* Free up the id */
+        idManager.remove(gameObject);
+
+        return Response.status(200).build();
     }
 
     @GET
     @Path("/games/{id}/players")
     public Response getPlayersForGame(@PathParam("id") int id) {
-        GameMap map = (GameMap)idManager.getObject(id);
+        Object gameObject = idManager.getObject(id);
 
-        JSONArray jsonPlayers = utils.playersToJson(map.getPlayers());
+        if (gameObject instanceof GamePlaceholder) {
+            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
 
-        return Response.status(200).entity(jsonPlayers.toJSONString()).build();
+            return Response.status(200).entity(utils.playersToJson(gamePlaceholder.getPlayers()).toJSONString()).build();
+        } else {
+            GameMap map = (GameMap) gameObject;
+
+            JSONArray jsonPlayers = utils.playersToJson(map.getPlayers());
+
+            return Response.status(200).entity(jsonPlayers.toJSONString()).build();
+        }
+    }
+
+
+    @POST
+    @Path("/games/{gameId}/players")
+    public Response addPlayerToGame(@PathParam("gameId") String gameId, String playerBody) throws ParseException {
+        JSONObject jsonPlayer = (JSONObject) parser.parse(playerBody);
+
+        Player player = utils.jsonToPlayer(jsonPlayer);
+
+        Object gameObject = idManager.getObject(Integer.parseInt(gameId));
+
+        if (gameObject instanceof GamePlaceholder) {
+            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+
+            gamePlaceholder.addPlayer(player);
+        }
+
+
+        return Response.status(201).entity(utils.playerToJson(player).toJSONString()).build();
+    }
+
+    @GET
+    @Path("/games/{gameId}/players/{playerId}")
+    public Response getPlayerForGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
+        Player player = (Player) idManager.getObject(Integer.parseInt(playerId));
+        Object gameObject = idManager.getObject(Integer.parseInt(gameId));
+
+        /* Return 404 if the game doesn't exist */
+        if (gameObject == null) {
+            return Response.status(404).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (gameObject instanceof GamePlaceholder) {
+            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+
+            /* Return 404 if the player does not belong to the given game */
+            if (!gamePlaceholder.getPlayers().contains(player)) {
+                return Response.status(404).build();
+            }
+        }
+
+        /* Return the player */
+        return Response.status(200).entity(utils.playerToJson(player).toJSONString()).build();
     }
 
     @GET
     @Path("/healthz")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response getHealth() {
         JSONObject response = new JSONObject();
 
-        response.put("health", "healthy");
+        response.put("isHealthy", true);
 
         return Response.status(200).entity(response.toJSONString()).build();
     }
 
     @GET
     @Path("/games/{gameId}/map/terrain")
-    public Response getTerrainForMap(@PathParam("gameId") int id) {
+    public Response getTerrainForMapInGame(@PathParam("gameId") int id) {
         GameMap map = (GameMap)idManager.getObject(id);
         JSONObject terrain = utils.terrainToJson(map);
 
@@ -134,13 +364,11 @@ public class SettlersAPI {
                 (Boolean)jsonBody.get("geologistNeeded")) {
             map.getFlagAtPoint(point).callGeologist();
 
-            System.out.println("Called geologist");
             response.put("message", "Called geologist to " + point);
         } else if (jsonBody.containsKey("scoutNeeded") &&
                 (Boolean)jsonBody.get("scoutNeeded")) {
             map.getFlagAtPoint(point).callScout();
 
-            System.out.println("Called scout");
             response.put("message", "Called scout to " + point);
         }
 
@@ -150,7 +378,6 @@ public class SettlersAPI {
     @GET
     @Path("/games/{gameId}/map/points")
     public Response getPoint(@PathParam("gameId") int gameId, @QueryParam("playerId") int playerId, @QueryParam("x") int x, @QueryParam("y") int y) {
-        System.out.println("Getting point info");
         Point point = new Point(x, y);
         GameMap map = (GameMap)idManager.getObject(gameId);
         Player player = (Player)idManager.getObject(playerId);
@@ -186,7 +413,7 @@ public class SettlersAPI {
         Building building = (Building) idManager.getObject(houseId);
         JSONObject jsonHouse = utils.houseToJson(building);
 
-        return Response.status(200).entity(jsonHouse).build();
+        return Response.status(200).entity(jsonHouse.toJSONString()).build();
     }
 
     @DELETE
@@ -209,8 +436,22 @@ public class SettlersAPI {
         return Response.status(200).entity(jsonResponse.toJSONString()).build();
     }
 
+    @GET
+    @Path("/games/{gameId}/players/{playerId}/houses")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getHouses(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId) {
+        Player player = (Player) idManager.getObject(playerId);
+
+        //FIXME: Verify that the player is connected to the game
+
+        return Response.status(200).entity(utils.housesToJson(player.getBuildings()).toJSONString()).build();
+    }
+
     @POST
     @Path("/games/{gameId}/players/{playerId}/houses")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response createHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String body) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
@@ -222,8 +463,7 @@ public class SettlersAPI {
 
         map.placeBuilding(building, point);
 
-        JSONObject jsonResponse = new JSONObject();
-        return Response.status(200).entity(jsonResponse.toJSONString()).build();
+        return Response.status(200).entity(utils.houseToJson(building).toJSONString()).build();
     }
 
     @PUT
@@ -255,37 +495,40 @@ public class SettlersAPI {
 
         JSONArray jsonPoints = (JSONArray) jsonRoad.get("points");
 
-        JSONObject jsonResponse = new JSONObject();
-
         List<Point> points = utils.jsonToPoints(jsonPoints);
 
+        Road road;
+
         if (points.size() == 2) {
-            map.placeAutoSelectedRoad(player, points.get(0), points.get(1));
-            jsonResponse.put("message", "Auto-placed road");
+            road = map.placeAutoSelectedRoad(player, points.get(0), points.get(1));
         } else {
-            map.placeRoad(player, points);
-            jsonResponse.put("message", "Placed road");
+            road = map.placeRoad(player, points);
         }
 
-        return Response.status(200).entity(jsonResponse.toJSONString()).build();
+        return Response.status(200).entity(utils.roadToJson(road).toJSONString()).build();
     }
 
     @POST
-    @Path("/games/{gameId}/players/{playerId}/roads")
-    public Response createFlag(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String bodyRoad) throws Exception {
+    @Path("/games/{gameId}/players/{playerId}/flags")
+    public Response createFlag(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String bodyFlag) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
-        JSONObject jsonPoint = (JSONObject) parser.parse(bodyRoad);
+        JSONObject jsonPoint = (JSONObject) parser.parse(bodyFlag);
 
         Point point = utils.jsonToPoint(jsonPoint);
 
-        map.placeFlag(player, point);
+        Flag flag = map.placeFlag(player, point);
 
-        JSONObject jsonResponse = new JSONObject();
+        return Response.status(200).entity(utils.flagToJson(flag).toJSONString()).build();
+    }
 
-        jsonResponse.put("message", "Raised flag");
+    @GET
+    @Path("/games/{gameId}/players/{playerId}/flags/{flagId}")
+    public Response getFlag(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("flagId") int flagId) {
+        // TODO: check that the flag belongs to the player and that the player belongs to the game
+        Flag flag = (Flag) idManager.getObject(flagId);
 
-        return Response.status(200).entity(jsonResponse.toJSONString()).build();
+        return Response.status(200).entity(utils.flagToJson(flag).toJSONString()).build();
     }
 
     @GET
@@ -378,7 +621,7 @@ public class SettlersAPI {
                     continue;
                 }
 
-                jsonFlags.add(utils.flagToJson(flag, idManager.getId(flag), playerId));
+                jsonFlags.add(utils.flagToJson(flag));
             }
 
             /* Fill in roads */

@@ -1,5 +1,7 @@
 package org.appland.settlers.rest.resource;
 
+import org.appland.settlers.maps.MapFile;
+import org.appland.settlers.maps.MapLoader;
 import org.appland.settlers.model.Bakery;
 import org.appland.settlers.model.Barracks;
 import org.appland.settlers.model.Building;
@@ -45,11 +47,12 @@ import org.json.simple.JSONObject;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class Utils {
+class Utils {
 
     private final IdManager idManager;
 
@@ -57,7 +60,7 @@ public class Utils {
         this.idManager = idManager;
     }
 
-    public JSONArray gamesToJson(List<GameMap> games) {
+    JSONArray gamesToJson(List<GameMap> games) {
         JSONArray jsonGames = new JSONArray();
 
         for (GameMap map : games) {
@@ -75,12 +78,10 @@ public class Utils {
         int id = idManager.getId(map);
 
         jsonGame.put("id", id);
-
-        jsonGame.put("width", map.getWidth());
-        jsonGame.put("height", map.getHeight());
-
-
         jsonGame.put("players", playersToJson(map.getPlayers()));
+
+        /* Set the status to STARTED because this is an instance of GameMap */
+        jsonGame.put("status", "STARTED");
 
         return jsonGame;
     }
@@ -102,7 +103,7 @@ public class Utils {
 
         jsonPlayer.put("name", player.getName());
         jsonPlayer.put("color", colorToHexString(player.getColor()));
-        jsonPlayer.put("id", i);
+        jsonPlayer.put("id", "" + i);
 
         /* Get the player's "center spot" */
         for (Building building : player.getBuildings()) {
@@ -122,6 +123,16 @@ public class Utils {
         }
 
         return jsonPlayer;
+    }
+
+    JSONArray pointsToJson(List<Point> points) {
+        JSONArray jsonPoints = new JSONArray();
+
+        for (Point point : points) {
+            jsonPoints.add(pointToJson(point));
+        }
+
+        return jsonPoints;
     }
 
     JSONObject pointToJson(Point point) {
@@ -152,22 +163,23 @@ public class Utils {
         int height = Integer.parseInt((String) jsonGame.get("height"));
         List<Player> players = jsonToPlayers((JSONArray) jsonGame.get("players"));
 
-        GameMap map = new GameMap(players, width, height);
-
-        return map;
+        return new GameMap(players, width, height);
     }
 
-    private List<Player> jsonToPlayers(JSONArray jsonPlayers) {
+    List<Player> jsonToPlayers(JSONArray jsonPlayers) {
         List<Player> players = new ArrayList<>();
 
-        for (Object jsonPlayer : jsonPlayers) {
-            jsonPlayers.add(jsonToPlayer((JSONObject) jsonPlayer));
+        if (jsonPlayers != null) {
+
+            for (Object jsonPlayer : jsonPlayers) {
+                players.add(jsonToPlayer((JSONObject) jsonPlayer));
+            }
         }
 
         return players;
     }
 
-    private Player jsonToPlayer(JSONObject jsonPlayer) {
+    Player jsonToPlayer(JSONObject jsonPlayer) {
         String name = (String) jsonPlayer.get("name");
         Color color = jsonToColor((String) jsonPlayer.get("color"));
 
@@ -176,18 +188,20 @@ public class Utils {
         return player;
     }
 
-    private Color jsonToColor(String color) {
-        return Color.BLUE;
+    private Color jsonToColor(String hexColor) {
+        return Color.decode(hexColor);
     }
 
-    public JSONObject terrainToJson(GameMap map) {
+    JSONObject terrainToJson(GameMap map) {
         JSONObject jsonTerrain = new JSONObject();
 
         JSONArray jsonTrianglesBelow = new JSONArray();
         JSONArray jsonTrianglesBelowRight = new JSONArray();
+        JSONArray jsonHeights = new JSONArray();
 
         jsonTerrain.put("straightBelow", jsonTrianglesBelow);
         jsonTerrain.put("belowToTheRight", jsonTrianglesBelowRight);
+        jsonTerrain.put("heights", jsonHeights);
 
         int start = 1;
 
@@ -206,6 +220,14 @@ public class Utils {
 
                     jsonTrianglesBelow.add(vegetationToJson(below.getVegetationType()));
                     jsonTrianglesBelowRight.add(vegetationToJson(belowRight.getVegetationType()));
+
+                    JSONObject jsonHeight = new JSONObject();
+
+                    jsonHeight.put("x", x);
+                    jsonHeight.put("y", y);
+                    jsonHeight.put("height", map.getHeightAtPoint(p));
+
+                    jsonHeights.add(jsonHeight);
                 }
 
                 if (start == 1) {
@@ -241,6 +263,8 @@ public class Utils {
                 return "ST";
             case DESERT:
                 return "DE";
+            case SAVANNAH:
+                return "SA";
             default:
                 System.out.println("Cannot handle this vegetation " + v);
                 System.exit(1);
@@ -249,7 +273,7 @@ public class Utils {
         return ""; // Should never be reached but the compiler complains
     }
 
-    public JSONObject pointToDetailedJson(Point point, Player player, GameMap map) {
+    JSONObject pointToDetailedJson(Point point, Player player, GameMap map) {
 
         JSONObject jsonPointInfo = pointToJson(point);
 
@@ -311,7 +335,7 @@ public class Utils {
 
         jsonHouse.put("type", building.getClass().getSimpleName());
         jsonHouse.put("playerId", idManager.getId(building.getPlayer()));
-        jsonHouse.put("houseId", idManager.getId(building));
+        jsonHouse.put("id", idManager.getId(building));
 
         if (building.canProduce()) {
             JSONArray jsonProduces = new JSONArray();
@@ -342,22 +366,22 @@ public class Utils {
         }
 
         if (building.underConstruction()) {
-            jsonHouse.put("state", "unfinished");
+            jsonHouse.put("state", "UNFINISHED");
         } else if (building.ready() && !building.occupied()) {
-            jsonHouse.put("state", "unoccupied");
+            jsonHouse.put("state", "UNOCCUPIED");
         } else if (building.ready() && building.occupied()) {
-            jsonHouse.put("state", "occupied");
+            jsonHouse.put("state", "OCCUPIED");
         } else if (building.burningDown()) {
-            jsonHouse.put("state", "burning");
+            jsonHouse.put("state", "BURNING");
         } else if (building.destroyed()) {
-            jsonHouse.put("state", "destroyed");
+            jsonHouse.put("state", "DESTROYED");
         }
 
         return jsonHouse;
     }
 
 
-    public List<Point> jsonToPoints(JSONArray jsonPoints) {
+    List<Point> jsonToPoints(JSONArray jsonPoints) {
         List<Point> points = new ArrayList<>();
 
         for (Object point : jsonPoints) {
@@ -368,8 +392,27 @@ public class Utils {
     }
 
     Point jsonToPoint(JSONObject point) {
-        int x = Integer.parseInt((String) point.get("x"));
-        int y = Integer.parseInt((String) point.get("y"));
+        int x;
+        int y;
+
+        Object xObject = point.get("x");
+        Object yObject = point.get("y");
+
+        if (xObject instanceof String) {
+            x = Integer.parseInt((String) xObject);
+        } else if (xObject instanceof Integer) {
+            x = (Integer) xObject;
+        } else {
+            x = ((Long) xObject).intValue();
+        }
+
+        if (yObject instanceof String) {
+            y = Integer.parseInt((String) yObject);
+        } else if (yObject instanceof Integer) {
+            y = (Integer) yObject;
+        } else {
+            y = ((Long) yObject).intValue();
+        }
 
         return new Point(x, y);
     }
@@ -496,11 +539,11 @@ public class Utils {
         return jsonWorker;
     }
 
-    JSONObject flagToJson(Flag flag, int flagId, int playerId) {
+    JSONObject flagToJson(Flag flag) {
         JSONObject jsonFlag = pointToJson(flag.getPosition());
 
-        jsonFlag.put("flagId", flagId);
-        jsonFlag.put("playerId", playerId);
+        jsonFlag.put("id", "" + idManager.getId(flag));
+        jsonFlag.put("playerId", "" + idManager.getId(flag.getPlayer()));
 
         return jsonFlag;
     }
@@ -579,4 +622,103 @@ public class Utils {
         return jsonCrop;
     }
 
+    JSONObject gamePlaceholderToJson(GamePlaceholder gamePlaceholder) {
+        JSONObject jsonGamePlaceholder = new JSONObject();
+
+        if (gamePlaceholder.getPlayers() != null) {
+            jsonGamePlaceholder.put("players", playersToJson(gamePlaceholder.getPlayers()));
+        } else {
+            jsonGamePlaceholder.put("players", Collections.EMPTY_LIST);
+        }
+
+        MapFile mapFile = gamePlaceholder.getMapFile();
+
+        if (mapFile != null) {
+            jsonGamePlaceholder.put("mapId", "" + idManager.getId(mapFile));
+
+            jsonGamePlaceholder.put("map", mapFileToJson(mapFile));
+        }
+
+        if (gamePlaceholder.isNameSet()) {
+            jsonGamePlaceholder.put("name", gamePlaceholder.getName());
+        }
+
+        jsonGamePlaceholder.put("id", "" + idManager.getId(gamePlaceholder));
+
+        /* Return a status of NOT_STARTED becuase this is a game placeholder */
+        jsonGamePlaceholder.put("status", "NOT_STARTED");
+
+        return jsonGamePlaceholder;
+    }
+
+    JSONObject playerToJson(Player player) {
+        JSONObject jsonPlayer = new JSONObject();
+
+        jsonPlayer.put("id", "" + idManager.getId(player));
+        jsonPlayer.put("name", player.getName());
+        jsonPlayer.put("color", colorToHexString(player.getColor()));
+
+        return jsonPlayer;
+    }
+
+    JSONArray mapFilesToJson(List<MapFile> mapFiles) {
+        JSONArray jsonMapFiles = new JSONArray();
+
+        for (MapFile mapFile : mapFiles) {
+            jsonMapFiles.add(mapFileToJson(mapFile));
+        }
+
+        return jsonMapFiles;
+    }
+
+    JSONObject mapFileToJson(MapFile mapFile) {
+        JSONObject jsonMapFile = new JSONObject();
+
+        jsonMapFile.put("title", mapFile.getTitle());
+        jsonMapFile.put("author", mapFile.getAuthor());
+        jsonMapFile.put("width", mapFile.getWidth());
+        jsonMapFile.put("height", mapFile.getHeight());
+        jsonMapFile.put("maxPlayers", mapFile.getMaxNumberOfPlayers());
+        jsonMapFile.put("id", "" + "" + idManager.getId(mapFile));
+        jsonMapFile.put("startingPoints", pointsToJson(mapFile.getStartingPoints()));
+
+        return jsonMapFile;
+    }
+
+    Collection gamePlaceholdersToJson(List<GamePlaceholder> gamePlaceholders) {
+        JSONArray jsonGamePlaceholders = new JSONArray();
+
+        for (GamePlaceholder gamePlaceholder : gamePlaceholders) {
+            jsonGamePlaceholders.add(gamePlaceholderToJson(gamePlaceholder));
+        }
+
+        return jsonGamePlaceholders;
+    }
+
+    GameMap gamePlaceholderToGame(GamePlaceholder gamePlaceholder) throws Exception {
+        MapLoader mapLoader = new MapLoader();
+        GameMap map = mapLoader.convertMapFileToGameMap(gamePlaceholder.getMapFile());
+
+        map.setPlayers(new ArrayList<>(gamePlaceholder.getPlayers()));
+
+        return map;
+    }
+
+    JSONArray housesToJson(List<Building> buildings) {
+        JSONArray jsonHouses = new JSONArray();
+
+        for (Building building : buildings) {
+            jsonHouses.add(houseToJson(building));
+        }
+
+        return jsonHouses;
+    }
+
+    JSONObject mapFileTerrainToJson(MapFile mapFile) throws Exception {
+        MapLoader mapLoader = new MapLoader();
+
+        GameMap map = mapLoader.convertMapFileToGameMap(mapFile);
+
+        return terrainToJson(map);
+    }
 }

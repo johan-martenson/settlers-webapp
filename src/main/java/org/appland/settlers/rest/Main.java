@@ -8,17 +8,16 @@ import org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher;
 
 public class Main {
 
-    static final String APPLICATION_PATH = "/*";
-    static final String CONTEXT_ROOT = "/";
-
-    public Main() {
-    }
+    private static final String APPLICATION_PATH = "/*";
+    private static final String CONTEXT_ROOT = "/";
 
     public static void main(String[] args) throws Exception {
-        new Main().run();
+        Main main = new Main();
+
+        main.run();
     }
 
-    public void run() throws Exception {
+    private void run() throws Exception {
 
         final int port = 8080;
         final Server server = new Server(port);
@@ -33,8 +32,7 @@ public class Main {
         // Setup RESTEasy's HttpServletDispatcher at "/api/*".
         final ServletHolder restEasyServlet = new ServletHolder(new HttpServletDispatcher());
         restEasyServlet.setInitParameter("resteasy.servlet.mapping.prefix", APPLICATION_PATH);
-        restEasyServlet.setInitParameter("javax.ws.rs.Application","org.appland.settlers.rest.FatJarApplication");
-        //context.addServlet(restEasyServlet, APPLICATION_PATH + "/*");
+        restEasyServlet.setInitParameter("javax.ws.rs.Application", FatJarApplication.class.getName());
         context.addServlet(restEasyServlet, APPLICATION_PATH);
 
         // Setup the DefaultServlet at "/".
