@@ -4,6 +4,7 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import junit.framework.TestCase;
+import org.appland.settlers.model.Point;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -16,7 +17,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -114,8 +114,10 @@ public class AppTest extends TestCase {
         /* Verify that the reply contains all the required attributes */
         Map<String, ?> jsonResponse = response.jsonPath().getMap("");
 
-        assertEquals(jsonResponse.keySet().size(), 3);
         assertTrue(jsonResponse.keySet().contains("id"));
+        assertTrue(jsonResponse.keySet().contains("players"));
+        assertTrue(jsonResponse.keySet().contains("status"));
+        assertTrue(jsonResponse.keySet().contains("resources"));
     }
 
     @Test
@@ -223,8 +225,10 @@ public class AppTest extends TestCase {
         /* Verify that the reply contains all the required attributes */
         Map<String, ?> jsonResponse = response.jsonPath().getMap("");
 
-        assertEquals(jsonResponse.keySet().size(), 3);
         assertTrue(jsonResponse.keySet().contains("id"));
+        assertTrue(jsonResponse.keySet().contains("players"));
+        assertTrue(jsonResponse.keySet().contains("status"));
+        assertTrue(jsonResponse.keySet().contains("resources"));
 
         /* Verify that the game exists */
         given().contentType(ContentType.JSON).when()
@@ -280,6 +284,379 @@ public class AppTest extends TestCase {
     }
 
     @Test
+    public void testDefaultResourceLevelIsMedium() {
+
+        /* Get the id of the first map */
+        String mapId = given().contentType(ContentType.JSON)
+                .when().get("/maps").then()
+                .statusCode(200)
+
+                .extract().jsonPath().getString("[0].id");
+
+        /* Create the game body */
+        Map<String, Object> game = new HashMap<>();
+
+        List<Map<String, String>> players = new ArrayList<>();
+
+        Map<String, String> player0 = new HashMap<>();
+
+        player0.put("name", "Player 0");
+        player0.put("color", "#000000");
+
+        players.add(player0);
+
+        game.put("mapId", mapId);
+        game.put("players", players);
+
+        /* Create the game */
+        String gameId = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+
+                .extract().jsonPath().getString("id");
+
+        /* Verify that the resource level is medium */
+        String resourceLevel = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}", gameId).then()
+                .extract().jsonPath().getString("resources");
+
+        assertEquals(resourceLevel, "MEDIUM");
+    }
+
+    @Test
+    public void testSetResourcesToLow() {
+
+        /* Get the id of the first map */
+        String mapId = given().contentType(ContentType.JSON)
+                .when().get("/maps").then()
+                .statusCode(200)
+
+                .extract().jsonPath().getString("[0].id");
+
+        /* Create the game body */
+        Map<String, Object> game = new HashMap<>();
+
+        List<Map<String, String>> players = new ArrayList<>();
+
+        Map<String, String> player0 = new HashMap<>();
+
+        player0.put("name", "Player 0");
+        player0.put("color", "#000000");
+
+        players.add(player0);
+
+        game.put("mapId", mapId);
+        game.put("players", players);
+
+        /* Create the game */
+        String gameId = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+
+                .extract().jsonPath().getString("id");
+
+        /* Set the resource level to LOW */
+        Map<String, String> modifiedGame = new HashMap<>();
+
+        modifiedGame.put("resources", "LOW");
+
+        given().contentType(ContentType.JSON).body(modifiedGame).when()
+                .patch("/games/{gameId}", gameId).then()
+                .statusCode(200)
+                .body("resources", equalTo("LOW"));
+    }
+
+    @Test
+    public void testSettingResourcesToLowReducesResourcesAvailable() {
+
+        /* Get the id of the first map */
+        String mapId = given().contentType(ContentType.JSON)
+                .when().get("/maps").then()
+                .statusCode(200)
+
+                .extract().jsonPath().getString("[0].id");
+
+        /* Create a game body */
+        Map<String, Object> game = new HashMap<>();
+
+        List<Map<String, String>> players = new ArrayList<>();
+
+        Map<String, String> player0 = new HashMap<>();
+
+        player0.put("name", "Player 0");
+        player0.put("color", "#000000");
+
+        players.add(player0);
+
+        game.put("mapId", mapId);
+        game.put("players", players);
+
+        /* Create a game */
+        String gameId0 = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+                .extract().jsonPath().getString("id");
+
+        /* Create a second game as a reference */
+        String gameId1 = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+                .extract().jsonPath().getString("id");
+
+        /* Set the resource level to LOW for the first game*/
+        Map<String, String> resourceModification = new HashMap<>();
+
+        resourceModification.put("resources", "LOW");
+
+        given().contentType(ContentType.JSON).body(resourceModification).when()
+                .patch("/games/{gameId}", gameId0).then()
+                .statusCode(200)
+                .body("resources", equalTo("LOW"));
+
+        /* Start both games */
+        Map<String, String> gameStatusModification = new HashMap<>();
+
+        gameStatusModification.put("status", "STARTED");
+
+        given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .patch("/games/{gameId}", gameId0).then()
+                .statusCode(200)
+                .body("status", equalTo("STARTED"));
+
+        given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .patch("/games/{gameId}", gameId1).then()
+                .statusCode(200)
+                .body("status", equalTo("STARTED"));
+
+        /* Get the amount of stones for the player in each game */
+        String playerId0 = given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .get("/games/{gameId}", gameId0).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("players[0].id");
+
+        String playerId1 = given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .get("/games/{gameId}", gameId1).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("players[0].id");
+
+        String houseId0 = given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .get("/games/{gameId}/players/{playerId}/houses", gameId0, playerId0).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("[0].id");
+
+        String houseId1 = given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .get("/games/{gameId}/players/{playerId}/houses", gameId1, playerId1).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("[0].id");
+
+        Map resources0 = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/players/{playerId}/houses/{houseId}", gameId0, playerId0, houseId0).then()
+                .statusCode(200)
+                .extract().jsonPath().getMap("resources");
+
+        Map resources1 = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/players/{playerId}/houses/{houseId}", gameId1, playerId1, houseId1).then()
+                .statusCode(200)
+                .extract().jsonPath().getMap("resources");
+
+        Map stone0 = (Map)resources0.get("stone");
+        Map stone1 = (Map)resources1.get("stone");
+
+        int stoneAmount0 = (int)stone0.get("has");
+        int stoneAmount1 = (int)stone1.get("has");
+
+        assertTrue(stoneAmount0 < stoneAmount1);
+    }
+
+    @Test
+    public void testSettingResourcesToHighReducesResourcesAvailable() {
+
+        /* Get the id of the first map */
+        String mapId = given().contentType(ContentType.JSON)
+                .when().get("/maps").then()
+                .statusCode(200)
+
+                .extract().jsonPath().getString("[0].id");
+
+        /* Create a game body */
+        Map<String, Object> game = new HashMap<>();
+
+        List<Map<String, String>> players = new ArrayList<>();
+
+        Map<String, String> player0 = new HashMap<>();
+
+        player0.put("name", "Player 0");
+        player0.put("color", "#000000");
+
+        players.add(player0);
+
+        game.put("mapId", mapId);
+        game.put("players", players);
+
+        /* Create a game */
+        String gameId0 = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+                .extract().jsonPath().getString("id");
+
+        /* Create a second game as a reference */
+        String gameId1 = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+                .extract().jsonPath().getString("id");
+
+        /* Set the resource level to HIGH for the first game */
+        Map<String, String> resourceModification = new HashMap<>();
+
+        resourceModification.put("resources", "HIGH");
+
+        given().contentType(ContentType.JSON).body(resourceModification).when()
+                .patch("/games/{gameId}", gameId0).then()
+                .statusCode(200)
+                .body("resources", equalTo("HIGH"));
+
+        /* Start both games */
+        Map<String, String> gameStatusModification = new HashMap<>();
+
+        gameStatusModification.put("status", "STARTED");
+
+        given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .patch("/games/{gameId}", gameId0).then()
+                .statusCode(200)
+                .body("status", equalTo("STARTED"));
+
+        given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .patch("/games/{gameId}", gameId1).then()
+                .statusCode(200)
+                .body("status", equalTo("STARTED"));
+
+        /* Get the amount of stones for the player in each game */
+        String playerId0 = given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .get("/games/{gameId}", gameId0).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("players[0].id");
+
+        String playerId1 = given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .get("/games/{gameId}", gameId1).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("players[0].id");
+
+        String houseId0 = given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .get("/games/{gameId}/players/{playerId}/houses", gameId0, playerId0).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("[0].id");
+
+        String houseId1 = given().contentType(ContentType.JSON).body(gameStatusModification).when()
+                .get("/games/{gameId}/players/{playerId}/houses", gameId1, playerId1).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("[0].id");
+
+        Map resources0 = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/players/{playerId}/houses/{houseId}", gameId0, playerId0, houseId0).then()
+                .statusCode(200)
+                .extract().jsonPath().getMap("resources");
+
+        Map resources1 = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/players/{playerId}/houses/{houseId}", gameId1, playerId1, houseId1).then()
+                .statusCode(200)
+                .extract().jsonPath().getMap("resources");
+
+        Map stone0 = (Map)resources0.get("stone");
+        Map stone1 = (Map)resources1.get("stone");
+
+        int stoneAmount0 = (int)stone0.get("has");
+        int stoneAmount1 = (int)stone1.get("has");
+
+        assertTrue(stoneAmount0 > stoneAmount1);
+    }
+
+    @Test
+    public void testSetResourcesToMedium() {
+
+        /* Get the id of the first map */
+        String mapId = given().contentType(ContentType.JSON)
+                .when().get("/maps").then()
+                .statusCode(200)
+
+                .extract().jsonPath().getString("[0].id");
+
+        /* Create the game body */
+        Map<String, Object> game = new HashMap<>();
+
+        List<Map<String, String>> players = new ArrayList<>();
+
+        Map<String, String> player0 = new HashMap<>();
+
+        player0.put("name", "Player 0");
+        player0.put("color", "#000000");
+
+        players.add(player0);
+
+        game.put("mapId", mapId);
+        game.put("players", players);
+
+        /* Create the game */
+        String gameId = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+
+                .extract().jsonPath().getString("id");
+
+        /* Set the resource level to medium */
+        Map<String, String> modifiedGame = new HashMap<>();
+
+        modifiedGame.put("resources", "MEDIUM");
+
+        given().contentType(ContentType.JSON).body(modifiedGame).when()
+                .patch("/games/{gameId}", gameId).then()
+                .statusCode(200)
+                .body("resources", equalTo("MEDIUM"));
+    }
+
+    @Test
+    public void testSetResourcesToHigh() {
+
+        /* Get the id of the first map */
+        String mapId = given().contentType(ContentType.JSON)
+                .when().get("/maps").then()
+                .statusCode(200)
+
+                .extract().jsonPath().getString("[0].id");
+
+        /* Create the game body */
+        Map<String, Object> game = new HashMap<>();
+
+        List<Map<String, String>> players = new ArrayList<>();
+
+        Map<String, String> player0 = new HashMap<>();
+
+        player0.put("name", "Player 0");
+        player0.put("color", "#000000");
+
+        players.add(player0);
+
+        game.put("mapId", mapId);
+        game.put("players", players);
+
+        /* Create the game */
+        String gameId = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+
+                .extract().jsonPath().getString("id");
+
+        /* Set the resource level to high */
+        Map<String, String> modifiedGame = new HashMap<>();
+
+        modifiedGame.put("resources", "HIGH");
+
+        given().contentType(ContentType.JSON).body(modifiedGame).when()
+                .patch("/games/{gameId}", gameId).then()
+                .statusCode(200)
+                .body("resources", equalTo("HIGH"));
+    }
+
+    @Test
     public void testNotStartedGameHasNoDiscoveredPoints() {
 
         /* Get the id of the first map */
@@ -322,7 +699,7 @@ public class AppTest extends TestCase {
 
                 .extract().jsonPath().getString("[0].id");
 
-        /* Create the map body */
+        /* Create the game body */
         Map<String, Object> game = new HashMap<>();
 
         List<Map<String, String>> players = new ArrayList<>();
@@ -548,8 +925,10 @@ public class AppTest extends TestCase {
         /* Verify that the reply contains all the required attributes */
         Map<String, ?> jsonResponse = response.jsonPath().getMap("");
 
-        assertEquals(jsonResponse.keySet().size(), 3    );
         assertTrue(jsonResponse.keySet().contains("id"));
+        assertTrue(jsonResponse.keySet().contains("players"));
+        assertTrue(jsonResponse.keySet().contains("status"));
+        assertTrue(jsonResponse.keySet().contains("resources"));
     }
 
     @Test
@@ -654,7 +1033,7 @@ public class AppTest extends TestCase {
         assertNotEquals(mapId, "");
 
         /* Verify that the terrain can be retrieved */
-        List<Map> heights = given().contentType(ContentType.JSON).when()
+        List<Integer> heights = given().contentType(ContentType.JSON).when()
                 .get("/maps/{mapId}/terrain", mapId).then()
                 .statusCode(200)
 
@@ -663,9 +1042,6 @@ public class AppTest extends TestCase {
 
         assertNotNull(heights);
         assertFalse(heights.isEmpty());
-        assertTrue(heights.get(0).containsKey("height"));
-        assertTrue(heights.get(0).containsKey("x"));
-        assertTrue(heights.get(0).containsKey("y"));
     }
 
     @Test
@@ -1492,6 +1868,88 @@ public class AppTest extends TestCase {
 
         assertNotNull(playerId2);
         assertEquals(playerId, playerId2);
+    }
+
+    @Test
+    public void testFindPossibleRoadToFlag() {
+
+        /* Get the id of the first map */
+        String mapId = given().contentType(ContentType.JSON)
+                .when().get("/maps").then()
+                .statusCode(200)
+
+                .extract().jsonPath().getString("[0].id");
+
+        /* Create the map body */
+        Map<String, Object> game = new HashMap<>();
+
+        List<Map<String, String>> players = new ArrayList<>();
+
+        Map<String, String> player0 = new HashMap<>();
+
+        player0.put("name", "Player 0");
+        player0.put("color", "#000000");
+
+        players.add(player0);
+
+        game.put("mapId", mapId);
+        game.put("players", players);
+
+        /* Create the game */
+        String gameId = given().contentType(ContentType.JSON).body(game).when()
+                .post("/games").then()
+                .statusCode(201)
+
+                .extract().jsonPath().getString("id");
+
+        /* Start the game */
+        Map<String, String> modifiedGame = new HashMap<>();
+
+        modifiedGame.put("status", "STARTED");
+
+        given().contentType(ContentType.JSON).body(modifiedGame).when()
+                .patch("/games/{gameId}", gameId).then()
+                .statusCode(200)
+                .body("status", equalTo("STARTED"));
+
+        /* Get the id of the player */
+        String playerId = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}", gameId).then()
+                .statusCode(200)
+                .extract().jsonPath().getString("players[0].id");
+
+        /* Get the location of the headquarter */
+        Map<String, Object> headquarter = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/players/{playerId}/houses", gameId, playerId).then()
+                .statusCode(200)
+                .extract().jsonPath().getMap("[0]");
+
+        /* Verify that we can find a possible way to the headquarter's flag */
+        Map findPossibleWayParameters = new HashMap();
+
+        Point point0 = Utils.getPositionForBuildingMap(headquarter).downRight().right().right();
+        Point point1 = Utils.getPositionForBuildingMap(headquarter).downRight();
+
+        findPossibleWayParameters.put("from", Utils.pointToMap(point0));
+        findPossibleWayParameters.put("to", Utils.pointToMap(point1));
+
+        List points = given().contentType(ContentType.JSON).body(findPossibleWayParameters).when()
+                .post("/rpc/games/{gameId}/players/{playerId}/find-new-road", gameId, playerId).then()
+                .statusCode(200)
+                .body("roadIsPossible", equalTo(true))
+                .extract().jsonPath().getList("possibleRoad");
+
+        Point point2 = Utils.mapToPoint((Map)points.get(0));
+        Point point3 = Utils.mapToPoint((Map)points.get(1));
+        Point point4 = Utils.mapToPoint((Map)points.get(2));
+
+        assertEquals(points.size(), 3);
+        assertEquals(point2.x, point0.x);
+        assertEquals(point2.y, point0.y);
+        assertEquals(point3.x, point0.left().x);
+        assertEquals(point3.y, point0.left().y);
+        assertEquals(point4.x, point1.x);
+        assertEquals(point4.y, point1.y);
     }
 }
 

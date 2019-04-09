@@ -7,15 +7,20 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static org.appland.settlers.rest.resource.ResourceLevel.MEDIUM;
+
 public class GamePlaceholder {
     private int height;
     private int width;
     private final Collection<Player> players;
     private MapFile mapFile;
     private String name;
+    private ResourceLevel resourceLevel;
 
     GamePlaceholder() {
         players = new ArrayList<>();
+
+        resourceLevel = MEDIUM;
     }
 
     public void setWidth(int width) {
@@ -67,5 +72,13 @@ public class GamePlaceholder {
 
     boolean isNameSet() {
         return name != null;
+    }
+
+    ResourceLevel getResources() {
+        return this.resourceLevel;
+    }
+
+    void setResource(ResourceLevel resourceLevel) {
+        this.resourceLevel = resourceLevel;
     }
 }

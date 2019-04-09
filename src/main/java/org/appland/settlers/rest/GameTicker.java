@@ -26,8 +26,11 @@ public class GameTicker {
         scheduler.scheduleAtFixedRate(() -> {
             for (GameMap map : games) {
                 try {
-                    map.stepTime();
+                    synchronized (map) {
+                        map.stepTime();
+                    }
                 } catch (Exception e) {
+                    System.out.println(e);
                     e.printStackTrace();
                 }
             }

@@ -5,6 +5,7 @@ import org.appland.settlers.maps.MapLoader;
 import org.appland.settlers.model.Bakery;
 import org.appland.settlers.model.Barracks;
 import org.appland.settlers.model.Building;
+import org.appland.settlers.model.Cargo;
 import org.appland.settlers.model.Catapult;
 import org.appland.settlers.model.CoalMine;
 import org.appland.settlers.model.Crop;
@@ -220,14 +221,7 @@ class Utils {
 
                     jsonTrianglesBelow.add(vegetationToJson(below.getVegetationType()));
                     jsonTrianglesBelowRight.add(vegetationToJson(belowRight.getVegetationType()));
-
-                    JSONObject jsonHeight = new JSONObject();
-
-                    jsonHeight.put("x", x);
-                    jsonHeight.put("y", y);
-                    jsonHeight.put("height", map.getHeightAtPoint(p));
-
-                    jsonHeights.add(jsonHeight);
+                    jsonHeights.add(map.getHeightAtPoint(p));
                 }
 
                 if (start == 1) {
@@ -346,24 +340,31 @@ class Utils {
             for (Material material : building.getProducedMaterial()) {
                 jsonProduces.add(material.name());
             }
+        }
 
-            JSONObject jsonResources = new JSONObject();
+        JSONObject jsonResources = new JSONObject();
 
-            for (Material material : building.getMaterialNeeded()) {
-                int amount = building.getTotalAmountNeeded(material);
+        for (Material material : Material.values()) {
+            int amountNeeded = building.getTotalAmountNeeded(material);
+            int amountAvailable = building.getAmount(material);
 
-                if (amount > 0) {
-                    JSONObject jsonResource = new JSONObject();
+            JSONObject jsonResource = new JSONObject();
 
-                    jsonResource.put("needs", amount);
-                    jsonResource.put("has", building.getAmount(material));
+            if (amountNeeded > 0) {
 
-                    jsonResources.put(material.name().toLowerCase(), jsonResource);
-                }
+                jsonResource.put("needs", amountNeeded);
             }
 
-            jsonHouse.put("resources", jsonResources);
+            if (amountAvailable > 0) {
+                jsonResource.put("has", amountAvailable);
+            }
+
+            if (amountAvailable > 0 || amountNeeded > 0) {
+                jsonResources.put(material.name().toLowerCase(), jsonResource);
+            }
         }
+
+        jsonHouse.put("resources", jsonResources);
 
         if (building.underConstruction()) {
             jsonHouse.put("state", "UNFINISHED");
@@ -648,6 +649,8 @@ class Utils {
         /* Return a status of NOT_STARTED becuase this is a game placeholder */
         jsonGamePlaceholder.put("status", "NOT_STARTED");
 
+        jsonGamePlaceholder.put("resources", gamePlaceholder.getResources().name());
+
         return jsonGamePlaceholder;
     }
 
@@ -696,12 +699,51 @@ class Utils {
     }
 
     GameMap gamePlaceholderToGame(GamePlaceholder gamePlaceholder) throws Exception {
+
+        /* Create a GameMap instance from the map file */
         MapLoader mapLoader = new MapLoader();
         GameMap map = mapLoader.convertMapFileToGameMap(gamePlaceholder.getMapFile());
 
+        /* Assign the players */
         map.setPlayers(new ArrayList<>(gamePlaceholder.getPlayers()));
 
         return map;
+    }
+
+    void adjustResources(GameMap map, ResourceLevel resources) throws Exception {
+
+        for (Player player : map.getPlayers()) {
+
+            Headquarter headquarter = (Headquarter)player.getBuildings().get(0);
+
+            if (resources == ResourceLevel.LOW) {
+
+                headquarter.retrieve(Material.STONE);
+                headquarter.retrieve(Material.STONE);
+                headquarter.retrieve(Material.STONE);
+
+                headquarter.retrieve(Material.PLANK);
+                headquarter.retrieve(Material.PLANK);
+                headquarter.retrieve(Material.PLANK);
+
+                headquarter.retrieve(Material.WOOD);
+                headquarter.retrieve(Material.WOOD);
+                headquarter.retrieve(Material.WOOD);
+            } else if (resources == ResourceLevel.HIGH) {
+
+                deliver(Material.STONE, 3, headquarter);
+                deliver(Material.PLANK, 3, headquarter);
+                deliver(Material.WOOD, 3, headquarter);
+            }
+        }
+    }
+
+    private void deliver(Material material, int amount, Headquarter headquarter) throws Exception {
+
+        for (int i = 0; i < amount; i++) {
+            headquarter.promiseDelivery(material);
+            headquarter.putCargo(new Cargo(material, headquarter.getMap()));
+        }
     }
 
     JSONArray housesToJson(List<Building> buildings) {

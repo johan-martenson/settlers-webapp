@@ -230,6 +230,9 @@ public class SettlersAPI {
                     map.placeBuilding(new Headquarter(players.get(i)), startingPoints.get(i));
                 }
 
+                /* Adjust the initial set of resources */
+                utils.adjustResources(map, gamePlaceholder.getResources());
+
                 /* Start the time for the game by adding it to the game ticker */
                 GameTicker gameTicker = (GameTicker) context.getAttribute(GAME_TICKER);
 
@@ -241,6 +244,15 @@ public class SettlersAPI {
             return Response.status(405).build();
         }
 
+        if (jsonUpdates.containsKey("resources") && gameObject instanceof GamePlaceholder) {
+            ResourceLevel level = ResourceLevel.valueOf((String) jsonUpdates.get("resources"));
+
+            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+
+            gamePlaceholder.setResource(level);
+
+            return Response.status(200).entity(utils.gamePlaceholderToJson(gamePlaceholder).toJSONString()).build();
+        }
 
         /* Return bad request (400) if there is no mapFileId included */
         return Response.status(400).build();
@@ -455,13 +467,16 @@ public class SettlersAPI {
     public Response createHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String body) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
+
         JSONObject jsonHouse = (JSONObject) parser.parse(body);
 
         Point point = utils.jsonToPoint(jsonHouse);
 
         Building building = utils.buildingFactory(jsonHouse, player);
 
-        map.placeBuilding(building, point);
+        synchronized (map) {
+            map.placeBuilding(building, point);
+        }
 
         return Response.status(200).entity(utils.houseToJson(building).toJSONString()).build();
     }
@@ -748,5 +763,39 @@ public class SettlersAPI {
         }
 
         return Response.status(200).entity(view.toJSONString()).build();
+    }
+
+    @POST
+    @Path("/rpc/games/{gameId}/players/{playerId}/find-new-road")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response findNewRoad(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String bodyFindNewRoad) throws ParseException {
+        System.out.println("Find new road");
+        GameMap map = (GameMap)idManager.getObject(gameId);
+        Player player = (Player)idManager.getObject(playerId);
+
+        JSONObject jsonNewRoadParameters = (JSONObject) parser.parse(bodyFindNewRoad);
+
+        Point start = utils.jsonToPoint((JSONObject) jsonNewRoadParameters.get("from"));
+        Point goal = utils.jsonToPoint((JSONObject) jsonNewRoadParameters.get("to"));
+        List<Point> avoid = null;
+
+        if (jsonNewRoadParameters.containsKey("avoid")) {
+            avoid = utils.jsonToPoints((JSONArray) jsonNewRoadParameters.get("avoid"));
+        }
+
+        List<Point> possibleRoad = map.findAutoSelectedRoad(player, start, goal, avoid);
+
+        JSONObject findNewRoadResponse = new JSONObject();
+
+        findNewRoadResponse.put("roadIsPossible", true);
+        findNewRoadResponse.put("possibleRoad", utils.pointsToJson(possibleRoad));
+
+        if (map.isFlagAtPoint(goal) || (map.isRoadAtPoint(goal) && map.isAvailableFlagPoint(player, goal))) {
+            findNewRoadResponse.put("closesRoad", true);
+        } else {
+            findNewRoadResponse.put("closesRoad", false);
+        }
+
+        return Response.status(200).entity(findNewRoadResponse.toJSONString()).build();
     }
 }
