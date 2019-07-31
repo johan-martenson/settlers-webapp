@@ -81,4 +81,8 @@ public class GamePlaceholder {
     void setResource(ResourceLevel resourceLevel) {
         this.resourceLevel = resourceLevel;
     }
+
+    public void removePlayer(Player player) {
+        this.players.remove(player);
+    }
 }

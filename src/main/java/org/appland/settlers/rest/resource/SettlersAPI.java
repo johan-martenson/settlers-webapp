@@ -34,6 +34,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -318,6 +319,41 @@ public class SettlersAPI {
         return Response.status(201).entity(utils.playerToJson(player).toJSONString()).build();
     }
 
+    @PATCH
+    @Path("/games/{gameId}/players/{playerId}")
+    public Response updatePlayerInGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, String body) throws ParseException {
+        GamePlaceholder gamePlaceholder = (GamePlaceholder) idManager.getObject(Integer.parseInt(gameId));
+        Player player = (Player) idManager.getObject(Integer.parseInt(playerId));
+        JSONObject jsonUpdates = (JSONObject) parser.parse(body);
+
+        // TODO: verify that the player is in the right game
+        // TODO: verify that the player exists
+
+        if (jsonUpdates.containsKey("name")) {
+            player.setName((String)jsonUpdates.get("name"));
+        }
+
+        if (jsonUpdates.containsKey("color")) {
+            player.setColor(Color.decode((String)jsonUpdates.get("color")));
+        }
+
+        return Response.status(200).entity(utils.playerToJson(player).toJSONString()).build();
+    }
+
+    @DELETE
+    @Path("/games/{gameId}/players/{playerId}")
+    public Response removePlayerFromGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
+        GamePlaceholder gamePlaceholder = (GamePlaceholder) idManager.getObject(Integer.parseInt(gameId));
+        Player player = (Player) idManager.getObject(Integer.parseInt(playerId));
+
+        // TODO: verify that the player is in the right game
+        // TODO: verify that the player exists
+
+        gamePlaceholder.removePlayer(player);
+
+        return Response.status(200).entity(utils.playerToJson(player).toJSONString()).build();
+    }
+
     @GET
     @Path("/games/{gameId}/players/{playerId}")
     public Response getPlayerForGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
@@ -389,7 +425,7 @@ public class SettlersAPI {
 
     @GET
     @Path("/games/{gameId}/map/points")
-    public Response getPoint(@PathParam("gameId") int gameId, @QueryParam("playerId") int playerId, @QueryParam("x") int x, @QueryParam("y") int y) {
+    public Response getPoint(@PathParam("gameId") int gameId, @QueryParam("playerId") int playerId, @QueryParam("x") int x, @QueryParam("y") int y) throws Exception {
         Point point = new Point(x, y);
         GameMap map = (GameMap)idManager.getObject(gameId);
         Player player = (Player)idManager.getObject(playerId);
@@ -416,7 +452,7 @@ public class SettlersAPI {
             jsonResponse.put("message", "Cannot remove flag for other player");
         }
 
-        return Response.status(200).entity(jsonResponse).build();
+        return Response.status(200).entity(jsonResponse.toJSONString()).build();
     }
 
     @GET
@@ -769,7 +805,6 @@ public class SettlersAPI {
     @Path("/rpc/games/{gameId}/players/{playerId}/find-new-road")
     @Produces(MediaType.APPLICATION_JSON)
     public Response findNewRoad(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String bodyFindNewRoad) throws ParseException {
-        System.out.println("Find new road");
         GameMap map = (GameMap)idManager.getObject(gameId);
         Player player = (Player)idManager.getObject(playerId);
 

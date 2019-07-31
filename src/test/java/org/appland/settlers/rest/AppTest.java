@@ -28,7 +28,6 @@ import java.util.Set;
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.when;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.hasItem;
 import static org.junit.Assert.assertNotEquals;
 
 /**
@@ -1320,6 +1319,94 @@ public class AppTest extends TestCase {
                 .body("name", equalTo("Some Other Name"))
                 .body("color", equalTo("#343434"))
                 .body("id", equalTo(playerId));
+    }
+
+    @Test
+    public void testUpdatePlayerNameAndColor() {
+
+        /* Create game without players */
+        Map<String,String> newGame = new HashMap<>();
+        newGame.put("width", "100");
+        newGame.put("height", "100");
+
+        String gameId = given().contentType("application/json").body(newGame)
+                .when().post("/games").then()
+                .extract().jsonPath().getString("id");
+
+        /* Add a player to the game */
+        Map<String, String> player = new HashMap<>();
+
+        player.put("name", "Some Other Name");
+        player.put("color", "#343434");
+
+        String playerId = given().contentType(ContentType.JSON).body(player)
+                .when().post("/games/{id}/players", gameId).then()
+
+                /* Store the id */
+                .extract().jsonPath().getString("id");
+
+        /* Verify that the id is set for the player */
+        assertNotNull(playerId);
+
+        /* Update the player's name and color */
+        player.put("name", "Changed name");
+        player.put("color", "#AABBCC");
+
+        given().contentType(ContentType.JSON).body(player).when()
+                .patch("/games/{gameId}/players/{playerId}", gameId, playerId).then()
+
+                .body("name", equalTo("Changed name"))
+                .body("color", equalTo("#aabbcc"));
+
+        /* Get the player again and verify that it's correct */
+        given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/players/{playerId}", gameId, playerId).then()
+
+                .body("name", equalTo("Changed name"))
+                .body("color", equalTo("#aabbcc"));
+    }
+
+    @Test
+    public void testPlayerRemovePlayerFromGame() {
+
+        /* Create game without players */
+        Map<String,String> newGame = new HashMap<>();
+        newGame.put("width", "100");
+        newGame.put("height", "100");
+
+        String gameId = given().contentType("application/json").body(newGame)
+                .when().post("/games").then()
+                .extract().jsonPath().getString("id");
+
+        /* Add a player to the game */
+        Map<String, String> player = new HashMap<>();
+
+        player.put("name", "Some Other Name");
+        player.put("color", "#343434");
+
+        String playerId = given().contentType(ContentType.JSON).body(player)
+                .when().post("/games/{id}/players", gameId).then()
+
+                /* Store the id */
+                .extract().jsonPath().getString("id");
+
+        /* Verify that the id is set for the player */
+        assertNotNull(playerId);
+
+        /* Remove the player */
+        given().contentType(ContentType.JSON).when()
+                .delete("/games/{gameId}/players/{playerId}", gameId, playerId).then()
+
+                .body("name", equalTo("Some Other Name"))
+                .body("color", equalTo("#343434"))
+                .body("id", equalTo(playerId));
+
+        /* Verify that the player cannot can be retrieved again */
+        given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/players/{playerId}", gameId, playerId).then()
+
+                /* Verify that the status code is 200 */
+                .statusCode(404);
     }
 
     @Test
