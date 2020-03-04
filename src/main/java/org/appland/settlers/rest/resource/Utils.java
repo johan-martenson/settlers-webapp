@@ -2,11 +2,50 @@ package org.appland.settlers.rest.resource;
 
 import org.appland.settlers.maps.MapFile;
 import org.appland.settlers.maps.MapLoader;
-import org.appland.settlers.model.*;
+import org.appland.settlers.model.Bakery;
+import org.appland.settlers.model.Barracks;
+import org.appland.settlers.model.Building;
+import org.appland.settlers.model.Cargo;
+import org.appland.settlers.model.Catapult;
+import org.appland.settlers.model.CoalMine;
+import org.appland.settlers.model.Crop;
+import org.appland.settlers.model.DonkeyFarm;
+import org.appland.settlers.model.Farm;
+import org.appland.settlers.model.Fishery;
+import org.appland.settlers.model.Flag;
+import org.appland.settlers.model.ForesterHut;
+import org.appland.settlers.model.Fortress;
+import org.appland.settlers.model.GameMap;
+import org.appland.settlers.model.GoldMine;
+import org.appland.settlers.model.GraniteMine;
+import org.appland.settlers.model.GuardHouse;
+import org.appland.settlers.model.Headquarter;
+import org.appland.settlers.model.HunterHut;
+import org.appland.settlers.model.IronMine;
+import org.appland.settlers.model.Material;
+import org.appland.settlers.model.Mill;
+import org.appland.settlers.model.Mint;
+import org.appland.settlers.model.PigFarm;
+import org.appland.settlers.model.Player;
+import org.appland.settlers.model.Point;
+import org.appland.settlers.model.Quarry;
+import org.appland.settlers.model.Road;
+import org.appland.settlers.model.Sawmill;
+import org.appland.settlers.model.Sign;
+import org.appland.settlers.model.Size;
+import org.appland.settlers.model.SlaughterHouse;
+import org.appland.settlers.model.Stone;
+import org.appland.settlers.model.Terrain;
+import org.appland.settlers.model.Tile;
+import org.appland.settlers.model.Tree;
+import org.appland.settlers.model.WatchTower;
+import org.appland.settlers.model.Well;
+import org.appland.settlers.model.Woodcutter;
+import org.appland.settlers.model.Worker;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import java.awt.*;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -291,7 +330,7 @@ class Utils {
         JSONObject jsonHouse = pointToJson(building.getPosition());
 
         jsonHouse.put("type", building.getClass().getSimpleName());
-        jsonHouse.put("playerId", idManager.getId(building.getPlayer()));
+        jsonHouse.put("playerId", "" + idManager.getId(building.getPlayer()));
         jsonHouse.put("id", idManager.getId(building));
 
         if (building.canProduce()) {
@@ -725,5 +764,21 @@ class Utils {
         GameMap map = mapLoader.convertMapFileToGameMap(mapFile);
 
         return terrainToJson(map);
+    }
+
+    public JSONArray playersToShortJson(List<Player> players) {
+        JSONArray jsonPlayers = new JSONArray();
+
+        for (Player player : players) {
+            JSONObject jsonPlayer = new JSONObject();
+
+            jsonPlayer.put("name", player.getName());
+            jsonPlayer.put("color", colorToHexString(player.getColor()));
+            jsonPlayer.put("id", idManager.getId(player));
+
+            jsonPlayers.add(jsonPlayer);
+        }
+
+        return jsonPlayers;
     }
 }

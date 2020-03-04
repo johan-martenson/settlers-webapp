@@ -6,11 +6,15 @@ import org.appland.settlers.model.Crop;
 import org.appland.settlers.model.Flag;
 import org.appland.settlers.model.GameMap;
 import org.appland.settlers.model.Headquarter;
+import org.appland.settlers.model.Material;
 import org.appland.settlers.model.Player;
 import org.appland.settlers.model.Point;
+import org.appland.settlers.model.ProductionDataPoint;
+import org.appland.settlers.model.ProductionDataSeries;
 import org.appland.settlers.model.Road;
 import org.appland.settlers.model.Sign;
 import org.appland.settlers.model.Size;
+import org.appland.settlers.model.StatisticsManager;
 import org.appland.settlers.model.Stone;
 import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.WildAnimal;
@@ -34,11 +38,19 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.awt.*;
+import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static org.appland.settlers.model.Material.GOLD;
+import static org.appland.settlers.model.Material.PLANK;
+import static org.appland.settlers.model.Material.SHIELD;
+import static org.appland.settlers.model.Material.STONE;
+import static org.appland.settlers.model.Material.SWORD;
+import static org.appland.settlers.model.Material.WOOD;
 
 @Path("/settlers/api")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -47,6 +59,14 @@ public class SettlersAPI {
 
     public final static String MAP_FILE_LIST = "mapFileList";
     public static final String GAME_TICKER = "gameTicker";
+    public final List<Material> PRODUCTION_STATISTICS_MATERIALS = Arrays.asList(
+            WOOD,
+            STONE,
+            PLANK,
+            GOLD,
+            SWORD,
+            SHIELD
+    );
 
     private final IdManager idManager;
     private final Utils utils;
@@ -142,8 +162,6 @@ public class SettlersAPI {
 
         /* Return 400 (bad request) if the body is empty */
         if (body.equals("")) {
-            System.out.println("Empty body");
-
             return Response.status(400).build();
         }
 
@@ -832,5 +850,60 @@ public class SettlersAPI {
         }
 
         return Response.status(200).entity(findNewRoadResponse.toJSONString()).build();
+    }
+
+    @GET
+    @Path("/games/{gameId}/statistics/production")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getMaterialStatistics(@PathParam("gameId") int gameId) {
+        GameMap map = (GameMap)idManager.getObject(gameId);
+
+        JSONObject jsonResponse = new JSONObject();
+
+        jsonResponse.put("players", utils.playersToShortJson(map.getPlayers()));
+
+        JSONArray jsonProductionStatisticsForAllMaterials = new JSONArray();
+        StatisticsManager statisticsManager = map.getStatisticsManager();
+
+        for (Material material : PRODUCTION_STATISTICS_MATERIALS) {
+
+            ProductionDataSeries materialProductionDataSeries = statisticsManager.getProductionStatisticsForMaterial(material);
+
+            /* Set the meta data for the report for this material */
+            JSONObject jsonMaterialStatisticsDataAndMeta = new JSONObject();
+            JSONArray jsonMaterialStatisticsDataSeries = new JSONArray();
+
+            jsonMaterialStatisticsDataAndMeta.put("material", material.name().toLowerCase());
+            jsonMaterialStatisticsDataAndMeta.put("materialStatistics", jsonMaterialStatisticsDataSeries);
+
+            /* Add the statistics for this material to the array */
+            jsonProductionStatisticsForAllMaterials.add(jsonMaterialStatisticsDataAndMeta);
+
+            for (ProductionDataPoint dataPoint : materialProductionDataSeries.getProductionDataPoints()) {
+
+                JSONObject jsonMaterialMeasurementPoint = new JSONObject();
+
+                /* Set measurement 0 */
+                jsonMaterialMeasurementPoint.put("time", dataPoint.getTime());
+
+                JSONArray jsonMaterialMeasurementPointValues = new JSONArray();
+
+                int[] values = dataPoint.getValues();
+
+                for (int i = 0; i < values.length; i++) {
+                    jsonMaterialMeasurementPointValues.add(values[i]);
+                }
+
+                jsonMaterialMeasurementPoint.put("values", jsonMaterialMeasurementPointValues);
+
+                /* Add the data point to the data series */
+                jsonMaterialStatisticsDataSeries.add(jsonMaterialMeasurementPoint);
+            }
+        }
+
+        /* Add the production statistics array to the response */
+        jsonResponse.put("materialStatistics", jsonProductionStatisticsForAllMaterials);
+
+        return Response.status(200).entity(jsonResponse.toJSONString()).build();
     }
 }

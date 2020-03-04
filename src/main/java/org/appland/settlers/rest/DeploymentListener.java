@@ -1,5 +1,6 @@
 package org.appland.settlers.rest;
 
+import org.appland.settlers.maps.InvalidMapException;
 import org.appland.settlers.maps.MapFile;
 import org.appland.settlers.maps.MapLoader;
 import org.appland.settlers.rest.resource.SettlersAPI;
@@ -44,7 +45,7 @@ class DeploymentListener implements ServletContextListener {
                 try {
                     MapFile mapFile = mapLoader.loadMapFromFile(mapFilename.toString());
                     mapFiles.add(mapFile);
-                } catch (Exception e) {
+                } catch (Exception | InvalidMapException e) {
                     System.out.println(mapFilename.toString());
                     System.out.println(e);
                 }
@@ -58,11 +59,17 @@ class DeploymentListener implements ServletContextListener {
                 "resources" + File.separatorChar +
                 "WELT01.SWD");
 
-        MapFile loadedMapFile = mapLoader.loadMapFromFile(mapFile.toString());
+        MapFile loadedMapFile = null;
+        try {
+            loadedMapFile = mapLoader.loadMapFromFile(mapFile.toString());
 
-        mapFiles.add(loadedMapFile);
+            mapFiles.add(loadedMapFile);
 
-        servletContextEvent.getServletContext().setAttribute(SettlersAPI.MAP_FILE_LIST, mapFiles);
+            servletContextEvent.getServletContext().setAttribute(SettlersAPI.MAP_FILE_LIST, mapFiles);
+        } catch (Exception | InvalidMapException e) {
+            e.printStackTrace();
+            System.out.println("FAILED TO LOAD MAP");
+        }
     }
 
     @Override
