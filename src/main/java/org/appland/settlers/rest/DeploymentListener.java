@@ -59,9 +59,8 @@ class DeploymentListener implements ServletContextListener {
                 "resources" + File.separatorChar +
                 "WELT01.SWD");
 
-        MapFile loadedMapFile = null;
         try {
-            loadedMapFile = mapLoader.loadMapFromFile(mapFile.toString());
+            MapFile loadedMapFile = mapLoader.loadMapFromFile(mapFile.toString());
 
             mapFiles.add(loadedMapFile);
 

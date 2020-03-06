@@ -6,6 +6,8 @@ import org.appland.settlers.model.Crop;
 import org.appland.settlers.model.Flag;
 import org.appland.settlers.model.GameMap;
 import org.appland.settlers.model.Headquarter;
+import org.appland.settlers.model.LandDataPoint;
+import org.appland.settlers.model.LandStatistics;
 import org.appland.settlers.model.Material;
 import org.appland.settlers.model.Player;
 import org.appland.settlers.model.Point;
@@ -316,7 +318,6 @@ public class SettlersAPI {
             return Response.status(200).entity(jsonPlayers.toJSONString()).build();
         }
     }
-
 
     @POST
     @Path("/games/{gameId}/players")
@@ -853,6 +854,55 @@ public class SettlersAPI {
     }
 
     @GET
+    @Path("/games/{gameId}/statistics/land")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getLandStatistics(@PathParam("gameId") int gameId) {
+        GameMap map = (GameMap)idManager.getObject(gameId);
+
+        JSONObject jsonResponse = new JSONObject();
+
+        /*
+
+        {'players': [...]    -- jsonPlayers
+         'landStatistics': [ -- jsonLandStatisticsDataSeries
+            {'time': 23,     -- jsonLandMeasurement
+             'values': [2, 3, 4, 5]
+            },
+         ...
+         ]
+        }
+         */
+
+        /* Add the players */
+        JSONArray jsonPlayers = utils.playersToShortJson(map.getPlayers());
+
+        /* Add the land statistics array to the response */
+        JSONArray jsonLandStatisticsDataSeries = new JSONArray();
+
+        LandStatistics landStatistics = map.getStatisticsManager().getLandStatistics();
+
+        for (LandDataPoint landDataPoint : landStatistics.getDataPoints()){
+            JSONObject jsonLandMeasurement = new JSONObject();
+
+            jsonLandMeasurement.put("time", landDataPoint.getTime());
+
+            JSONArray jsonLandValues = new JSONArray();
+            for (int landSize : landDataPoint.getValues()) {
+                jsonLandValues.add(landSize);
+            }
+
+            jsonLandMeasurement.put("values", jsonLandValues);
+
+            jsonLandStatisticsDataSeries.add(jsonLandMeasurement);
+        }
+
+        jsonResponse.put("players", jsonPlayers);
+        jsonResponse.put("landStatistics", jsonLandStatisticsDataSeries);
+
+        return Response.status(200).entity(jsonResponse.toJSONString()).build();
+    }
+
+    @GET
     @Path("/games/{gameId}/statistics/production")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getMaterialStatistics(@PathParam("gameId") int gameId) {
@@ -890,8 +940,8 @@ public class SettlersAPI {
 
                 int[] values = dataPoint.getValues();
 
-                for (int i = 0; i < values.length; i++) {
-                    jsonMaterialMeasurementPointValues.add(values[i]);
+                for (int value : values) {
+                    jsonMaterialMeasurementPointValues.add(value);
                 }
 
                 jsonMaterialMeasurementPoint.put("values", jsonMaterialMeasurementPointValues);

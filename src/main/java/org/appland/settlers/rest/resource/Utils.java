@@ -353,7 +353,6 @@ class Utils {
             JSONObject jsonResource = new JSONObject();
 
             if (amountNeeded > 0) {
-
                 jsonResource.put("needs", amountNeeded);
             }
 
@@ -648,7 +647,7 @@ class Utils {
 
         jsonGamePlaceholder.put("id", "" + idManager.getId(gamePlaceholder));
 
-        /* Return a status of NOT_STARTED becuase this is a game placeholder */
+        /* Return a status of NOT_STARTED because this is a game placeholder */
         jsonGamePlaceholder.put("status", "NOT_STARTED");
 
         jsonGamePlaceholder.put("resources", gamePlaceholder.getResources().name());

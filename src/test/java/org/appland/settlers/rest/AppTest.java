@@ -122,10 +122,10 @@ public class AppTest extends TestCase {
         /* Verify that the reply contains all the required attributes */
         Map<String, ?> jsonResponse = response.jsonPath().getMap("");
 
-        assertTrue(jsonResponse.keySet().contains("id"));
-        assertTrue(jsonResponse.keySet().contains("players"));
-        assertTrue(jsonResponse.keySet().contains("status"));
-        assertTrue(jsonResponse.keySet().contains("resources"));
+        assertTrue(jsonResponse.containsKey("id"));
+        assertTrue(jsonResponse.containsKey("players"));
+        assertTrue(jsonResponse.containsKey("status"));
+        assertTrue(jsonResponse.containsKey("resources"));
     }
 
     @Test
@@ -229,10 +229,10 @@ public class AppTest extends TestCase {
         /* Verify that the reply contains all the required attributes */
         Map<String, ?> jsonResponse = response.jsonPath().getMap("");
 
-        assertTrue(jsonResponse.keySet().contains("id"));
-        assertTrue(jsonResponse.keySet().contains("players"));
-        assertTrue(jsonResponse.keySet().contains("status"));
-        assertTrue(jsonResponse.keySet().contains("resources"));
+        assertTrue(jsonResponse.containsKey("id"));
+        assertTrue(jsonResponse.containsKey("players"));
+        assertTrue(jsonResponse.containsKey("status"));
+        assertTrue(jsonResponse.containsKey("resources"));
 
         /* Verify that the game exists */
         given().contentType(ContentType.JSON).when()
@@ -287,7 +287,7 @@ public class AppTest extends TestCase {
     public void testDefaultResourceLevelIsMedium() {
 
         /* Create a game with one player */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Verify that the resource level is medium */
         String resourceLevel = given().contentType(ContentType.JSON).when()
@@ -301,7 +301,7 @@ public class AppTest extends TestCase {
     public void testSetResourcesToLow() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Set the resource level to LOW */
         Map<String, String> modifiedGame = new HashMap<>();
@@ -318,10 +318,10 @@ public class AppTest extends TestCase {
     public void testSettingResourcesToLowReducesResourcesAvailable() {
 
         /* Create a game */
-        String gameId0 = createDefaultGame();
+        String gameId0 = createOnePlayerGame();
 
         /* Create a second game as a reference */
-        String gameId1 = createDefaultGame();
+        String gameId1 = createOnePlayerGame();
 
         /* Set the resource level to LOW for the first game*/
         setResourceLevelForGame(gameId0, "LOW");
@@ -368,10 +368,10 @@ public class AppTest extends TestCase {
     public void testSettingResourcesToHighReducesResourcesAvailable() {
 
         /* Create a game */
-        String gameId0 = createDefaultGame();
+        String gameId0 = createOnePlayerGame();
 
         /* Create a second game as a reference */
-        String gameId1 = createDefaultGame();
+        String gameId1 = createOnePlayerGame();
 
         /* Set the resource level to HIGH for the first game */
         String resourceLevel = "HIGH";
@@ -425,7 +425,7 @@ public class AppTest extends TestCase {
     public void testSetResourcesToMedium() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Set the resource level to medium */
         setResourceLevelForGame(gameId, "MEDIUM");
@@ -435,7 +435,7 @@ public class AppTest extends TestCase {
     public void testSetResourcesToHigh() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Set the resource level to high */
         setResourceLevelForGame(gameId, "HIGH");
@@ -474,7 +474,7 @@ public class AppTest extends TestCase {
     public void testStartedGameHasDiscoveredPointsAndHeadquarter() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -502,7 +502,7 @@ public class AppTest extends TestCase {
     public void testGettingPlayersAfterStartingGame() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -576,7 +576,7 @@ public class AppTest extends TestCase {
     public void testDeleteGame() {
 
         /* Add the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Verify that the game exists */
         given().contentType(ContentType.JSON).when()
@@ -623,10 +623,10 @@ public class AppTest extends TestCase {
         /* Verify that the reply contains all the required attributes */
         Map<String, ?> jsonResponse = response.jsonPath().getMap("");
 
-        assertTrue(jsonResponse.keySet().contains("id"));
-        assertTrue(jsonResponse.keySet().contains("players"));
-        assertTrue(jsonResponse.keySet().contains("status"));
-        assertTrue(jsonResponse.keySet().contains("resources"));
+        assertTrue(jsonResponse.containsKey("id"));
+        assertTrue(jsonResponse.containsKey("players"));
+        assertTrue(jsonResponse.containsKey("status"));
+        assertTrue(jsonResponse.containsKey("resources"));
     }
 
     @Test
@@ -767,7 +767,7 @@ public class AppTest extends TestCase {
 
         assertEquals(startingPoints.size(), 7);
         for (Object startingPointObject : startingPoints) {
-            Map startingPointMap = (HashMap)startingPointObject;
+            Map startingPointMap = (Map)startingPointObject;
 
             for (Point point : points) {
                 if (point.x == (Integer)startingPointMap.get("x") &&
@@ -1192,7 +1192,7 @@ public class AppTest extends TestCase {
     public void testCreateHouseReturnsCreatedHouse() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -1242,7 +1242,7 @@ public class AppTest extends TestCase {
     public void testCreateFlagReturnsCreatedFlag() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -1289,7 +1289,7 @@ public class AppTest extends TestCase {
     public void testCourierWalks() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -1375,7 +1375,7 @@ public class AppTest extends TestCase {
     public void testFlagIdIsString() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -1407,7 +1407,7 @@ public class AppTest extends TestCase {
     public void testPlayerIdInFlagIsString() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -1452,7 +1452,7 @@ public class AppTest extends TestCase {
     public void testFindPossibleRoadToFlag() {
 
         /* Create the game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -1498,7 +1498,7 @@ public class AppTest extends TestCase {
     public void testGetMaterialStatisticsOnStart() {
 
         /* Create a game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -1537,7 +1537,7 @@ public class AppTest extends TestCase {
 
         boolean woodFound = false;
         for (Map materialStatistics : statisticsArray) {
-            if ("wood".equals((String)materialStatistics.get("material"))) {
+            if ("wood".equals(materialStatistics.get("material"))) {
                 woodFound = true;
 
                 break;
@@ -1571,7 +1571,7 @@ public class AppTest extends TestCase {
     public void testProductionStatisticsContainsRightMaterials() {
 
         /* Create a game */
-        String gameId = createDefaultGame();
+        String gameId = createOnePlayerGame();
 
         /* Start the game */
         startGame(gameId);
@@ -1580,7 +1580,7 @@ public class AppTest extends TestCase {
         Map statistics = getProductionStatisticsForGame(gameId);
 
         /* Verify that statistics for the required materials are available */
-        List<Material> requiredMaterials = Arrays.asList(new Material[] {WOOD, PLANK, STONE, GOLD, SWORD, SHIELD});
+        List<Material> requiredMaterials = Arrays.asList(WOOD, PLANK, STONE, GOLD, SWORD, SHIELD);
         List<Map> statisticsArray = (List<Map>)statistics.get("materialStatistics");
 
         for (Material material : requiredMaterials) {
@@ -1588,15 +1588,99 @@ public class AppTest extends TestCase {
 
             for (Map materialStatistics : statisticsArray) {
 
-                if (material.name().toLowerCase().equals((String) materialStatistics.get("material"))) {
+                if (material.name().toLowerCase().equals(materialStatistics.get("material"))) {
                     materialFound = true;
 
                     break;
                 }
             }
 
-            assertTrue(materialFound);;
+            assertTrue(materialFound);
         }
+    }
+
+    @Test
+    public void testGetLandStatisticsFromGame() {
+
+        /* Create a game */
+        String gameId = createOnePlayerGame();
+
+        /* Start the game */
+        startGame(gameId);
+
+        /* Verify that it's possible to get land statistics for the game */
+        Map landStatistics = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/statistics/land", gameId).then()
+                .statusCode(200)
+                .extract().jsonPath().getMap("");
+
+        assertTrue(landStatistics.containsKey("players"));
+        assertTrue(landStatistics.containsKey("landStatistics"));
+    }
+
+    @Test
+    public void testGetLandStatisticsFromGameHasInitialDataPoint() {
+
+        /* Create a game */
+        String gameId = createOnePlayerGame();
+
+        /* Start the game */
+        startGame(gameId);
+
+        /* Get land statistics for the game */
+        Map landStatistics = getLandStatistics(gameId);
+
+        /* Verify that statistics for each player is available */
+        assertTrue(landStatistics.containsKey("players"));
+        assertTrue(landStatistics.containsKey("landStatistics"));
+
+        List<Map> statisticsArray = (List<Map>) landStatistics.get("landStatistics");
+
+        assertTrue(statisticsArray.size() >= 1);
+        assertTrue(statisticsArray.get(0).containsKey("time"));
+        assertTrue(statisticsArray.get(0).containsKey("values"));
+
+        List<Integer> values = (List<Integer>) statisticsArray.get(0).get("values");
+
+        assertEquals(values.size(), 1);
+    }
+
+    @Test
+    public void testPlayersAreCorrectInLandStatistics() {
+
+        /* Create a game */
+        String gameId = createOnePlayerGame();
+
+        /* Start the game */
+        startGame(gameId);
+
+        /* Get land statistics for the game */
+        Map landStatistics = getLandStatistics(gameId);
+
+        /* Verify that the players field is correct */
+        List<Map> jsonPlayers = (List<Map>)landStatistics.get("players");
+
+        assertEquals(jsonPlayers.size(), 1);
+
+        Map jsonPlayer = jsonPlayers.get(0);
+
+        assertTrue(jsonPlayer.containsKey("name"));
+        assertTrue(jsonPlayer.containsKey("color"));
+        assertEquals(jsonPlayer.get("name"), "Player 0");
+        assertEquals(jsonPlayer.get("color"), "#000000");
+
+    }
+
+    private Map getLandStatistics(String gameId) {
+        Map landStatistics = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/statistics/land", gameId).then()
+                .statusCode(200)
+                .extract().jsonPath().getMap("");
+
+        assertTrue(landStatistics.containsKey("players"));
+        assertTrue(landStatistics.containsKey("landStatistics"));
+
+        return landStatistics;
     }
 
     private Map<Object, Object> getProductionStatisticsForGame(String gameId) {
@@ -1636,7 +1720,7 @@ public class AppTest extends TestCase {
                 .body("status", equalTo("STARTED"));
     }
 
-    private String createDefaultGame() {
+    private String createOnePlayerGame() {
         String gameId;
 
         /* Get the id of the first map */
