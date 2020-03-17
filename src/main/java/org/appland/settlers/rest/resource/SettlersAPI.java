@@ -538,18 +538,36 @@ public class SettlersAPI {
 
     @PUT
     @Path("/games/{gameId}/players/{playerId}/houses/{houseId}")
-    public Response updateHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("houseId") int houseId) throws Exception {
+    public Response updateHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("houseId") int houseId, String body) throws Exception {
         Building building = (Building) idManager.getObject(houseId);
         Player player = (Player) idManager.getObject(playerId);
 
+        JSONObject jsonHouseModification = (JSONObject) parser.parse(body);
+
         JSONObject jsonResponse = new JSONObject();
 
-        if (building.getPlayer().equals(player)) {
-            player.attack(building, 1);
+        System.out.println(jsonHouseModification.keySet());
 
-            jsonResponse.put("message", "Attacking building");
-        } else {
-            jsonResponse.put("message", "Cannot attack own building");
+        if (jsonHouseModification.containsKey("evacuate")) {
+
+            if (!building.isMilitaryBuilding()) {
+                jsonResponse.put("message", "Cannot evacuate non-military building");
+            } else if (!(building.occupied() || building.ready())) {
+                jsonResponse.put("message", "Cannot evacuate a building in this state");
+            } else {
+                building.evacuate();
+
+                jsonResponse = utils.houseToJson(building);
+            }
+        } else if(jsonHouseModification.containsKey("attack")) {
+
+            if (building.getPlayer().equals(player)) {
+                player.attack(building, 1);
+
+                jsonResponse.put("message", "Attacking building");
+            } else {
+                jsonResponse.put("message", "Cannot attack own building");
+            }
         }
 
         return Response.status(200).entity(jsonResponse.toJSONString()).build();
@@ -864,6 +882,7 @@ public class SettlersAPI {
         /*
 
         {'players': [...]    -- jsonPlayers
+         'currentTime': 12345,
          'landStatistics': [ -- jsonLandStatisticsDataSeries
             {'time': 23,     -- jsonLandMeasurement
              'values': [2, 3, 4, 5]
@@ -898,6 +917,7 @@ public class SettlersAPI {
 
         jsonResponse.put("players", jsonPlayers);
         jsonResponse.put("landStatistics", jsonLandStatisticsDataSeries);
+        jsonResponse.put("currentTime", map.getCurrentTime());
 
         return Response.status(200).entity(jsonResponse.toJSONString()).build();
     }

@@ -379,6 +379,10 @@ class Utils {
             jsonHouse.put("state", "DESTROYED");
         }
 
+        if (building.underConstruction()) {
+            jsonHouse.put("constructionProgress", building.getConstructionProgress());
+        }
+
         return jsonHouse;
     }
 

@@ -1238,6 +1238,116 @@ public class AppTest extends TestCase {
                 .body("id", equalTo(Integer.parseInt(houseId)));
     }
 
+    @Ignore
+    @Test
+    public void testMilitaryBuildingCanBeEvacuated() throws InterruptedException {
+
+        /* Create the game */
+        String gameId = createOnePlayerGame();
+
+        /* Start the game */
+        startGame(gameId);
+
+        /* Get the id of the player */
+        String playerId = getPlayerIds(gameId).get(0);
+
+        /* Get the location of the headquarter */
+        Map<String, Object> headquarter = given().contentType(ContentType.JSON).when()
+                .get("/games/{gameId}/players/{playerId}/houses", gameId, playerId).then()
+                .statusCode(200)
+                .log().all()
+                .extract().jsonPath().getMap("[0]");
+
+        /* Place barracks */
+        Point point01 = jsonToPoint(headquarter);
+        Point point02 = new Point(point01.x - 8, point01.y);
+        int x = (Integer)headquarter.get("x") - 8;
+        int y = (Integer)headquarter.get("y");
+
+        String buildingType = "Barracks";
+
+        String houseId = placeBuilding(gameId, playerId, point02.x, point02.y, buildingType);
+
+        /* Connect the barracks to the headquarter */
+        Map<String, Object> jsonRoadBody = new HashMap<>();
+        List<Map<String, Integer>> points = new ArrayList<>();
+
+        points.add(pointToJson(point01.downRight()));
+        points.add(pointToJson(point02.downRight()));
+
+        jsonRoadBody.put("points", points);
+
+        given().contentType(ContentType.JSON).body(jsonRoadBody).when()
+                .post("/games/{gameId}/players/{playerId}/roads", gameId, playerId).then()
+                .statusCode(200).log().all();
+
+        /* Wait for the barracks to get constructed */
+        for (int i = 0; i < 100; i++) {
+
+            Map<String, Object> house = given().contentType(ContentType.JSON).when()
+                    .get("/games/{gameId}/players/{playerId}/houses/{houseId}", gameId, playerId, houseId).then()
+                    .log().all().extract().jsonPath().getMap("");
+
+            if (house.get("state").equals("UNOCCUPIED")) {
+                break;
+            }
+
+            System.out.println("Sleeping " + i);
+            Thread.sleep(1000);
+        }
+
+        /* Verify that the barracks can be evacuated */
+        Map<String, Object> parameters = new HashMap<>();
+
+        parameters.put("evacuate", true);
+
+        given().contentType(ContentType.JSON).body(parameters).log().all().when()
+                .put("/games/{gameId}/players/{playerId}/houses/{houseId}", gameId, playerId, houseId).then()
+                .statusCode(200).log().all()
+                .body("type", equalTo("Barracks"))
+                .body("evacuate", equalTo(true))
+                .body("x", equalTo(x))
+                .body("y", equalTo(y))
+                .body("id", equalTo(Integer.parseInt(houseId)));
+    }
+
+    private Point jsonToPoint(Map<String, Object> jsonPoint) {
+        return new Point(
+                (Integer)jsonPoint.get("x"),
+                (Integer)jsonPoint.get("y")
+        );
+    }
+
+    private Map<String, Integer> pointToJson(Point point) {
+        Map<String, Integer> jsonPoint = new HashMap<>();
+
+        jsonPoint.put("x", point.x);
+        jsonPoint.put("y", point.y);
+
+        return jsonPoint;
+    }
+
+    private String placeBuilding(String gameId, String playerId, int x, int y, String buildingType) {
+        Map<String, Object> house = new HashMap<>();
+
+        house.put("type", buildingType);
+        house.put("x", x);
+        house.put("y", y);
+        house.put("playerId", playerId);
+
+        /* Place the house */
+        String houseId = given().contentType(ContentType.JSON).body(house).when()
+                .post("/games/{gameId}/players/{playerId}/houses", gameId, playerId).then()
+                .statusCode(200)
+                .body("type", equalTo(buildingType))
+                .body("x", equalTo(x))
+                .body("y", equalTo(y))
+                .extract().jsonPath().getString("id");
+
+        assertNotNull(houseId);
+        return houseId;
+    }
+
     @Test
     public void testCreateFlagReturnsCreatedFlag() {
 
@@ -1616,6 +1726,7 @@ public class AppTest extends TestCase {
 
         assertTrue(landStatistics.containsKey("players"));
         assertTrue(landStatistics.containsKey("landStatistics"));
+        assertTrue(landStatistics.containsKey("currentTime"));
     }
 
     @Test
