@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static io.restassured.RestAssured.given;
-import static io.restassured.RestAssured.when;
 import static org.appland.settlers.model.Material.GOLD;
 import static org.appland.settlers.model.Material.PLANK;
 import static org.appland.settlers.model.Material.SHIELD;
@@ -85,20 +84,6 @@ public class AppTest extends TestCase {
     @AfterClass
     public static void tearDownFrontendServer() {
 
-    }
-
-    @Test
-    public void testHealthStatusCode() {
-        given().when().get("http://localhost:8080/settlers/api/healthz").then().statusCode(200);
-    }
-
-    @Test
-    public void testHealthBodyIsCorrect() {
-        when().
-                get("http://localhost:8080/settlers/api/healthz").
-                then().
-                statusCode(200).
-                body("isHealthy", equalTo(true));
     }
 
     @Test

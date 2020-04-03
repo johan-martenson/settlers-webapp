@@ -399,17 +399,6 @@ public class SettlersAPI {
     }
 
     @GET
-    @Path("/healthz")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getHealth() {
-        JSONObject response = new JSONObject();
-
-        response.put("isHealthy", true);
-
-        return Response.status(200).entity(response.toJSONString()).build();
-    }
-
-    @GET
     @Path("/games/{gameId}/map/terrain")
     public Response getTerrainForMapInGame(@PathParam("gameId") int id) {
         GameMap map = (GameMap)idManager.getObject(id);
@@ -429,12 +418,18 @@ public class SettlersAPI {
 
         if (jsonBody.containsKey("geologistNeeded") &&
                 (Boolean)jsonBody.get("geologistNeeded")) {
-            map.getFlagAtPoint(point).callGeologist();
+
+            synchronized (map) {
+                map.getFlagAtPoint(point).callGeologist();
+            }
 
             response.put("message", "Called geologist to " + point);
         } else if (jsonBody.containsKey("scoutNeeded") &&
                 (Boolean)jsonBody.get("scoutNeeded")) {
-            map.getFlagAtPoint(point).callScout();
+
+            synchronized (map) {
+                map.getFlagAtPoint(point).callScout();
+            }
 
             response.put("message", "Called scout to " + point);
         }
@@ -464,7 +459,10 @@ public class SettlersAPI {
         JSONObject jsonResponse = new JSONObject();
 
         if (player.equals(flag.getPlayer())) {
-            map.removeFlag(flag);
+
+            synchronized (map) {
+                map.removeFlag(flag);
+            }
 
             jsonResponse.put("message", "Flag removed");
         } else {
@@ -478,7 +476,12 @@ public class SettlersAPI {
     @Path("/games/{gameId}/players/{playerId}/houses/{houseId}")
     public Response getHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("houseId") int houseId) {
         Building building = (Building) idManager.getObject(houseId);
-        JSONObject jsonHouse = utils.houseToJson(building);
+
+        JSONObject jsonHouse;
+
+        synchronized (building.getMap()) {
+            jsonHouse = utils.houseToJson(building);
+        }
 
         return Response.status(200).entity(jsonHouse.toJSONString()).build();
     }
@@ -493,7 +496,10 @@ public class SettlersAPI {
         JSONObject jsonResponse = new JSONObject();
 
         if (building.getPlayer().equals(player)) {
-            building.tearDown();
+
+            synchronized (map) {
+                building.tearDown();
+            }
 
             jsonResponse.put("message", "Tore down building");
         } else {
@@ -548,21 +554,48 @@ public class SettlersAPI {
 
         System.out.println(jsonHouseModification.keySet());
 
-        if (jsonHouseModification.containsKey("evacuate")) {
+        boolean doEvacuationChange = jsonHouseModification.containsKey("evacuate");
+        boolean doPromotionsChange = jsonHouseModification.containsKey("promotionsEnabled");
+
+        if (doEvacuationChange || doPromotionsChange) {
+
+            boolean evacuate = (boolean)jsonHouseModification.getOrDefault("evacuate", false);
+            boolean promotionsEnabled = (boolean)jsonHouseModification.getOrDefault("promotionsEnabled", false);
 
             if (!building.isMilitaryBuilding()) {
                 jsonResponse.put("message", "Cannot evacuate non-military building");
             } else if (!(building.occupied() || building.ready())) {
                 jsonResponse.put("message", "Cannot evacuate a building in this state");
             } else {
-                building.evacuate();
+
+                synchronized (player.getMap()) {
+
+                    if (doEvacuationChange) {
+                        if (evacuate) {
+                            building.evacuate();
+                        } else {
+                            building.cancelEvacuation();
+                        }
+                    }
+
+                    if (doPromotionsChange) {
+                        if (promotionsEnabled) {
+                            building.enablePromotions();
+                        } else {
+                            building.disablePromotions();
+                        }
+                    }
+                }
 
                 jsonResponse = utils.houseToJson(building);
             }
         } else if(jsonHouseModification.containsKey("attack")) {
 
             if (building.getPlayer().equals(player)) {
-                player.attack(building, 1);
+
+                synchronized (player.getMap()) {
+                    player.attack(building, 1);
+                }
 
                 jsonResponse.put("message", "Attacking building");
             } else {
@@ -588,12 +621,38 @@ public class SettlersAPI {
         Road road;
 
         if (points.size() == 2) {
-            road = map.placeAutoSelectedRoad(player, points.get(0), points.get(1));
+
+            synchronized (map) {
+                road = map.placeAutoSelectedRoad(player, points.get(0), points.get(1));
+            }
         } else {
-            road = map.placeRoad(player, points);
+
+            synchronized (map) {
+                road = map.placeRoad(player, points);
+            }
         }
 
         return Response.status(200).entity(utils.roadToJson(road).toJSONString()).build();
+    }
+
+    @DELETE
+    @Path("/games/{gameId}/players/{playerId}/roads/{roadId}")
+    public Response removeRoad(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("roadId") int roadId) {
+        GameMap map = (GameMap) idManager.getObject(gameId);
+        Player player = (Player) idManager.getObject(playerId);
+        Road road = (Road) idManager.getObject(roadId);
+
+        JSONObject message = new JSONObject();
+
+        try {
+            map.removeRoad(road);
+
+            message.put("result", "OK");
+        } catch (Exception e) {
+            message.put("result", "Failed");
+        }
+
+        return Response.status(200).entity(message.toJSONString()).build();
     }
 
     @POST
@@ -605,7 +664,11 @@ public class SettlersAPI {
 
         Point point = utils.jsonToPoint(jsonPoint);
 
-        Flag flag = map.placeFlag(player, point);
+        Flag flag = null;
+
+        synchronized (map) {
+            flag = map.placeFlag(player, point);
+        }
 
         return Response.status(200).entity(utils.flagToJson(flag).toJSONString()).build();
     }
@@ -771,10 +834,8 @@ public class SettlersAPI {
 
                 jsonCrops.add(utils.cropToJson(crop));
             }
-        }
 
-        /* Fill in available construction */
-        try {
+            /* Fill in available construction */
             for (Point point : player.getAvailableFlagPoints()) {
 
                 /* Filter points not discovered yet */
@@ -816,23 +877,20 @@ public class SettlersAPI {
 
                 ((JSONArray)jsonAvailableConstruction.get(key)).add("mine");
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(2);
-        }
 
-        for (Point point : player.getAvailableMiningPoints()) {
+            for (Point point : player.getAvailableMiningPoints()) {
 
-            /* Filter points not discovered yet */
-            if (!player.getDiscoveredLand().contains(point)) {
-                continue;
+                /* Filter points not discovered yet */
+                if (!player.getDiscoveredLand().contains(point)) {
+                    continue;
+                }
+
+                String key = "" + point.x + "," + point.y;
+
+                jsonAvailableConstruction.putIfAbsent(key, new JSONArray());
+
+                ((JSONArray)jsonAvailableConstruction.get(key)).add("mine");
             }
-
-            String key = "" + point.x + "," + point.y;
-
-            jsonAvailableConstruction.putIfAbsent(key, new JSONArray());
-
-            ((JSONArray)jsonAvailableConstruction.get(key)).add("mine");
         }
 
         return Response.status(200).entity(view.toJSONString()).build();
@@ -855,7 +913,11 @@ public class SettlersAPI {
             avoid = utils.jsonToPoints((JSONArray) jsonNewRoadParameters.get("avoid"));
         }
 
-        List<Point> possibleRoad = map.findAutoSelectedRoad(player, start, goal, avoid);
+        List<Point> possibleRoad;
+
+        synchronized (map) {
+            possibleRoad = map.findAutoSelectedRoad(player, start, goal, avoid);
+        }
 
         JSONObject findNewRoadResponse = new JSONObject();
 
@@ -898,21 +960,23 @@ public class SettlersAPI {
         /* Add the land statistics array to the response */
         JSONArray jsonLandStatisticsDataSeries = new JSONArray();
 
-        LandStatistics landStatistics = map.getStatisticsManager().getLandStatistics();
+        synchronized (map) {
+            LandStatistics landStatistics = map.getStatisticsManager().getLandStatistics();
 
-        for (LandDataPoint landDataPoint : landStatistics.getDataPoints()){
-            JSONObject jsonLandMeasurement = new JSONObject();
+            for (LandDataPoint landDataPoint : landStatistics.getDataPoints()) {
+                JSONObject jsonLandMeasurement = new JSONObject();
 
-            jsonLandMeasurement.put("time", landDataPoint.getTime());
+                jsonLandMeasurement.put("time", landDataPoint.getTime());
 
-            JSONArray jsonLandValues = new JSONArray();
-            for (int landSize : landDataPoint.getValues()) {
-                jsonLandValues.add(landSize);
+                JSONArray jsonLandValues = new JSONArray();
+                for (int landSize : landDataPoint.getValues()) {
+                    jsonLandValues.add(landSize);
+                }
+
+                jsonLandMeasurement.put("values", jsonLandValues);
+
+                jsonLandStatisticsDataSeries.add(jsonLandMeasurement);
             }
-
-            jsonLandMeasurement.put("values", jsonLandValues);
-
-            jsonLandStatisticsDataSeries.add(jsonLandMeasurement);
         }
 
         jsonResponse.put("players", jsonPlayers);
@@ -937,37 +1001,39 @@ public class SettlersAPI {
 
         for (Material material : PRODUCTION_STATISTICS_MATERIALS) {
 
-            ProductionDataSeries materialProductionDataSeries = statisticsManager.getProductionStatisticsForMaterial(material);
+            synchronized (map) {
+                ProductionDataSeries materialProductionDataSeries = statisticsManager.getProductionStatisticsForMaterial(material);
 
-            /* Set the meta data for the report for this material */
-            JSONObject jsonMaterialStatisticsDataAndMeta = new JSONObject();
-            JSONArray jsonMaterialStatisticsDataSeries = new JSONArray();
+                /* Set the meta data for the report for this material */
+                JSONObject jsonMaterialStatisticsDataAndMeta = new JSONObject();
+                JSONArray jsonMaterialStatisticsDataSeries = new JSONArray();
 
-            jsonMaterialStatisticsDataAndMeta.put("material", material.name().toLowerCase());
-            jsonMaterialStatisticsDataAndMeta.put("materialStatistics", jsonMaterialStatisticsDataSeries);
+                jsonMaterialStatisticsDataAndMeta.put("material", material.name().toLowerCase());
+                jsonMaterialStatisticsDataAndMeta.put("materialStatistics", jsonMaterialStatisticsDataSeries);
 
-            /* Add the statistics for this material to the array */
-            jsonProductionStatisticsForAllMaterials.add(jsonMaterialStatisticsDataAndMeta);
+                /* Add the statistics for this material to the array */
+                jsonProductionStatisticsForAllMaterials.add(jsonMaterialStatisticsDataAndMeta);
 
-            for (ProductionDataPoint dataPoint : materialProductionDataSeries.getProductionDataPoints()) {
+                for (ProductionDataPoint dataPoint : materialProductionDataSeries.getProductionDataPoints()) {
 
-                JSONObject jsonMaterialMeasurementPoint = new JSONObject();
+                    JSONObject jsonMaterialMeasurementPoint = new JSONObject();
 
-                /* Set measurement 0 */
-                jsonMaterialMeasurementPoint.put("time", dataPoint.getTime());
+                    /* Set measurement 0 */
+                    jsonMaterialMeasurementPoint.put("time", dataPoint.getTime());
 
-                JSONArray jsonMaterialMeasurementPointValues = new JSONArray();
+                    JSONArray jsonMaterialMeasurementPointValues = new JSONArray();
 
-                int[] values = dataPoint.getValues();
+                    int[] values = dataPoint.getValues();
 
-                for (int value : values) {
-                    jsonMaterialMeasurementPointValues.add(value);
+                    for (int value : values) {
+                        jsonMaterialMeasurementPointValues.add(value);
+                    }
+
+                    jsonMaterialMeasurementPoint.put("values", jsonMaterialMeasurementPointValues);
+
+                    /* Add the data point to the data series */
+                    jsonMaterialStatisticsDataSeries.add(jsonMaterialMeasurementPoint);
                 }
-
-                jsonMaterialMeasurementPoint.put("values", jsonMaterialMeasurementPointValues);
-
-                /* Add the data point to the data series */
-                jsonMaterialStatisticsDataSeries.add(jsonMaterialMeasurementPoint);
             }
         }
 
