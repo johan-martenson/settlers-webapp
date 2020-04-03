@@ -2,8 +2,10 @@ package org.appland.settlers.rest.resource;
 
 import org.appland.settlers.maps.MapFile;
 import org.appland.settlers.maps.MapLoader;
+import org.appland.settlers.model.Armory;
 import org.appland.settlers.model.Bakery;
 import org.appland.settlers.model.Barracks;
+import org.appland.settlers.model.Brewery;
 import org.appland.settlers.model.Building;
 import org.appland.settlers.model.Cargo;
 import org.appland.settlers.model.Catapult;
@@ -22,7 +24,9 @@ import org.appland.settlers.model.GuardHouse;
 import org.appland.settlers.model.Headquarter;
 import org.appland.settlers.model.HunterHut;
 import org.appland.settlers.model.IronMine;
+import org.appland.settlers.model.IronSmelter;
 import org.appland.settlers.model.Material;
+import org.appland.settlers.model.Military;
 import org.appland.settlers.model.Mill;
 import org.appland.settlers.model.Mint;
 import org.appland.settlers.model.PigFarm;
@@ -278,11 +282,12 @@ class Utils {
                 jsonPointInfo.put("building", houseToJson(building));
                 jsonPointInfo.put("is", "building");
                 jsonPointInfo.put("buildingId", idManager.getId(building));
-            }
-
-            if (map.isFlagAtPoint(point)) {
+            } else if (map.isFlagAtPoint(point)) {
                 jsonPointInfo.put("is", "flag");
                 jsonPointInfo.put("flagId", idManager.getId(map.getFlagAtPoint(point)));
+            } else if (map.isRoadAtPoint(point)) {
+                jsonPointInfo.put("is", "road");
+                jsonPointInfo.put("roadId", idManager.getId(map.getRoadAtPoint(point)));
             }
 
             JSONArray canBuild = new JSONArray();
@@ -381,6 +386,20 @@ class Utils {
 
         if (building.underConstruction()) {
             jsonHouse.put("constructionProgress", building.getConstructionProgress());
+        }
+
+        /* Add amount of hosted soldiers for military buildings */
+        if (building.isMilitaryBuilding() && building.ready()) {
+            JSONArray jsonSoldiers = new JSONArray();
+
+            for (Military military : building.getHostedMilitary()) {
+                jsonSoldiers.add(military.getRank().name().toUpperCase());
+            }
+
+            jsonHouse.put("soldiers", jsonSoldiers);
+            jsonHouse.put("maxSoldiers", building.getMaxHostedMilitary());
+            jsonHouse.put("evacuated", building.isEvacuated());
+            jsonHouse.put("promotionsEnabled", building.isPromotionEnabled());
         }
 
         return jsonHouse;
@@ -497,6 +516,15 @@ class Utils {
                 break;
             case "HunterHut":
                 building = new HunterHut(player);
+                break;
+            case "IronSmelter":
+                building = new IronSmelter(player);
+                break;
+            case "Armory":
+                building = new Armory(player);
+                break;
+            case "Brewery":
+                building = new Brewery(player);
                 break;
             default:
                 System.out.println("DON'T KNOW HOW TO CREATE BUILDING " + jsonHouse.get("type"));
@@ -616,6 +644,11 @@ class Utils {
                     System.exit(1);
             }
         }
+
+        Point point = sign.getPosition();
+
+        jsonSign.put("x", point.x);
+        jsonSign.put("y", point.y);
 
         return jsonSign;
     }
