@@ -7,6 +7,8 @@ import org.appland.settlers.model.Bakery;
 import org.appland.settlers.model.Barracks;
 import org.appland.settlers.model.Brewery;
 import org.appland.settlers.model.Building;
+import org.appland.settlers.model.BuildingCapturedMessage;
+import org.appland.settlers.model.BuildingLostMessage;
 import org.appland.settlers.model.Cargo;
 import org.appland.settlers.model.Catapult;
 import org.appland.settlers.model.CoalMine;
@@ -18,6 +20,7 @@ import org.appland.settlers.model.Flag;
 import org.appland.settlers.model.ForesterHut;
 import org.appland.settlers.model.Fortress;
 import org.appland.settlers.model.GameMap;
+import org.appland.settlers.model.GeologistFindMessage;
 import org.appland.settlers.model.GoldMine;
 import org.appland.settlers.model.GraniteMine;
 import org.appland.settlers.model.GuardHouse;
@@ -27,8 +30,11 @@ import org.appland.settlers.model.IronMine;
 import org.appland.settlers.model.IronSmelter;
 import org.appland.settlers.model.Material;
 import org.appland.settlers.model.Military;
+import org.appland.settlers.model.MilitaryBuildingOccupiedMessage;
+import org.appland.settlers.model.MilitaryBuildingReadyMessage;
 import org.appland.settlers.model.Mill;
 import org.appland.settlers.model.Mint;
+import org.appland.settlers.model.NoMoreResourcesMessage;
 import org.appland.settlers.model.PigFarm;
 import org.appland.settlers.model.Player;
 import org.appland.settlers.model.Point;
@@ -39,9 +45,11 @@ import org.appland.settlers.model.Sign;
 import org.appland.settlers.model.Size;
 import org.appland.settlers.model.SlaughterHouse;
 import org.appland.settlers.model.Stone;
+import org.appland.settlers.model.StoreHouseIsReadyMessage;
 import org.appland.settlers.model.Terrain;
 import org.appland.settlers.model.Tile;
 import org.appland.settlers.model.Tree;
+import org.appland.settlers.model.UnderAttackMessage;
 import org.appland.settlers.model.WatchTower;
 import org.appland.settlers.model.Well;
 import org.appland.settlers.model.Woodcutter;
@@ -56,6 +64,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static org.appland.settlers.model.Message.MessageType.GEOLOGIST_FIND;
+import static org.appland.settlers.model.Message.MessageType.MILITARY_BUILDING_OCCUPIED;
+import static org.appland.settlers.model.Message.MessageType.MILITARY_BUILDING_READY;
+import static org.appland.settlers.model.Message.MessageType.NO_MORE_RESOURCES;
+import static org.appland.settlers.model.Message.MessageType.UNDER_ATTACK;
 
 class Utils {
 
@@ -336,7 +350,7 @@ class Utils {
 
         jsonHouse.put("type", building.getClass().getSimpleName());
         jsonHouse.put("playerId", "" + idManager.getId(building.getPlayer()));
-        jsonHouse.put("id", idManager.getId(building));
+        jsonHouse.put("id", "" + idManager.getId(building));
 
         if (building.canProduce()) {
             JSONArray jsonProduces = new JSONArray();
@@ -661,7 +675,7 @@ class Utils {
         return jsonCrop;
     }
 
-    JSONObject gamePlaceholderToJson(GamePlaceholder gamePlaceholder) {
+    JSONObject gamePlaceholderToJson(GameResource gamePlaceholder) {
         JSONObject jsonGamePlaceholder = new JSONObject();
 
         if (gamePlaceholder.getPlayers() != null) {
@@ -726,24 +740,24 @@ class Utils {
         return jsonMapFile;
     }
 
-    Collection gamePlaceholdersToJson(List<GamePlaceholder> gamePlaceholders) {
+    Collection gamePlaceholdersToJson(List<GameResource> gamePlaceholders) {
         JSONArray jsonGamePlaceholders = new JSONArray();
 
-        for (GamePlaceholder gamePlaceholder : gamePlaceholders) {
+        for (GameResource gamePlaceholder : gamePlaceholders) {
             jsonGamePlaceholders.add(gamePlaceholderToJson(gamePlaceholder));
         }
 
         return jsonGamePlaceholders;
     }
 
-    GameMap gamePlaceholderToGame(GamePlaceholder gamePlaceholder) throws Exception {
+    GameMap gamePlaceholderToGame(GameResource gamePlaceholder) throws Exception {
 
         /* Create a GameMap instance from the map file */
         MapLoader mapLoader = new MapLoader();
         GameMap map = mapLoader.convertMapFileToGameMap(gamePlaceholder.getMapFile());
 
         /* Assign the players */
-        map.setPlayers(new ArrayList<>(gamePlaceholder.getPlayers()));
+        map.setPlayers(gamePlaceholder.getPlayers());
 
         return map;
     }
@@ -816,5 +830,86 @@ class Utils {
         }
 
         return jsonPlayers;
+    }
+
+    public JSONObject buildingLostMessageToJson(BuildingLostMessage buildingLostMessage) {
+        JSONObject jsonBuildingLostMessage = new JSONObject();
+
+        jsonBuildingLostMessage.put("type", "BUILDING_LOST");
+        jsonBuildingLostMessage.put("houseId", "" + idManager.getId(buildingLostMessage.getBuilding()));
+
+        return jsonBuildingLostMessage;
+    }
+
+    public JSONObject buildingCapturedMessageToJson(BuildingCapturedMessage buildingCapturedMessage) {
+        JSONObject jsonBuildingCapturedMessage = new JSONObject();
+
+        jsonBuildingCapturedMessage.put("type", "BUILDING_CAPTURED");
+        jsonBuildingCapturedMessage.put("houseId", "" + idManager.getId(buildingCapturedMessage.getBuilding()));
+
+        return jsonBuildingCapturedMessage;
+    }
+
+    public JSONObject jsonStoreHouseIsReadyMessageToJson(StoreHouseIsReadyMessage storeHouseIsReadyMessage) {
+        JSONObject jsonStoreHouseIsReadyMessage = new JSONObject();
+
+        jsonStoreHouseIsReadyMessage.put("type", "STORE_HOUSE_IS_READY");
+        jsonStoreHouseIsReadyMessage.put("houseId", "" + idManager.getId(storeHouseIsReadyMessage.getBuilding()));
+
+        return jsonStoreHouseIsReadyMessage;
+    }
+
+    JSONObject militaryBuildingReadyMessageToJson(MilitaryBuildingReadyMessage militaryBuildingReadyMessage) {
+        JSONObject jsonMilitaryBuildingOccupiedMessage;
+        jsonMilitaryBuildingOccupiedMessage = new JSONObject();
+
+        jsonMilitaryBuildingOccupiedMessage.put("type", MILITARY_BUILDING_READY.toString());
+        jsonMilitaryBuildingOccupiedMessage.put("houseId", "" + idManager.getId(militaryBuildingReadyMessage.getBuilding()));
+        return jsonMilitaryBuildingOccupiedMessage;
+    }
+
+    JSONObject noMoreResourcesMessageToJson(NoMoreResourcesMessage noMoreResourcesMessage) {
+        JSONObject jsonNoMoreResourcesMessage = new JSONObject();
+
+        jsonNoMoreResourcesMessage.put("type", NO_MORE_RESOURCES.toString());
+        jsonNoMoreResourcesMessage.put("houseId", "" + idManager.getId(noMoreResourcesMessage.getBuilding()));
+        return jsonNoMoreResourcesMessage;
+    }
+
+    JSONObject militaryBuildingOccupiedMessageToJson(MilitaryBuildingOccupiedMessage militaryBuildingOccupiedMessage) {
+        JSONObject jsonBorderExpandedMessage = new JSONObject();
+
+        JSONObject jsonBorderExpandedPoint = new JSONObject();
+
+        jsonBorderExpandedPoint.put("x", militaryBuildingOccupiedMessage.getBuilding().getPosition().x);
+        jsonBorderExpandedPoint.put("y", militaryBuildingOccupiedMessage.getBuilding().getPosition().y);
+
+        jsonBorderExpandedMessage.put("type", MILITARY_BUILDING_OCCUPIED.toString());
+        jsonBorderExpandedMessage.put("point", jsonBorderExpandedPoint);
+        return jsonBorderExpandedMessage;
+    }
+
+    JSONObject underAttackMessageToJson(UnderAttackMessage underAttackMessage) {
+        JSONObject jsonUnderAttackMessage;
+        jsonUnderAttackMessage = new JSONObject();
+
+        jsonUnderAttackMessage.put("type", UNDER_ATTACK.toString());
+        jsonUnderAttackMessage.put("houseId", "" + idManager.getId(underAttackMessage.getBuilding()));
+        return jsonUnderAttackMessage;
+    }
+
+    JSONObject geologistFindMessageToJson(GeologistFindMessage geologistFindMessage) {
+        JSONObject jsonGeologistFindMessage = new JSONObject();
+
+        JSONObject jsonGeologistFindPoint = new JSONObject();
+
+        jsonGeologistFindPoint.put("x", geologistFindMessage.getPoint().x);
+        jsonGeologistFindPoint.put("y", geologistFindMessage.getPoint().y);
+
+        jsonGeologistFindMessage.put("type", GEOLOGIST_FIND.toString());
+        jsonGeologistFindMessage.put("point", jsonGeologistFindPoint);
+
+        jsonGeologistFindMessage.put("material", geologistFindMessage.getMaterial().toString());
+        return jsonGeologistFindMessage;
     }
 }

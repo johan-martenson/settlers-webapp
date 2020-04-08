@@ -1220,7 +1220,7 @@ public class AppTest extends TestCase {
                 .body("type", equalTo("Woodcutter"))
                 .body("x", equalTo(x))
                 .body("y", equalTo(y))
-                .body("id", equalTo(Integer.parseInt(houseId)));
+                .body("id", equalTo(houseId));
     }
 
     @Ignore

@@ -1,26 +1,34 @@
 package org.appland.settlers.rest.resource;
 
+import org.appland.settlers.computer.CompositePlayer;
+import org.appland.settlers.computer.ComputerPlayer;
 import org.appland.settlers.maps.MapFile;
+import org.appland.settlers.model.GameMap;
 import org.appland.settlers.model.Player;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import static org.appland.settlers.rest.resource.ResourceLevel.MEDIUM;
 
-public class GamePlaceholder {
+public class GameResource {
     private int height;
     private int width;
-    private final Collection<Player> players;
+    private final List<Player> players;
     private MapFile mapFile;
     private String name;
     private ResourceLevel resourceLevel;
+    private GameMap map;
+    private final Utils utils;
+    private final List<ComputerPlayer> computerPlayers;
 
-    GamePlaceholder() {
+    GameResource(Utils utils) {
         players = new ArrayList<>();
 
         resourceLevel = MEDIUM;
+
+        this.utils = utils;
+        computerPlayers = new ArrayList<>();
     }
 
     public void setWidth(int width) {
@@ -35,7 +43,7 @@ public class GamePlaceholder {
         this.players.addAll(players);
     }
 
-    Collection<Player> getPlayers() {
+    List<Player> getPlayers() {
         return players;
     }
 
@@ -47,7 +55,7 @@ public class GamePlaceholder {
         return width;
     }
 
-    void addPlayer(Player player) {
+    void addHumanPlayer(Player player) {
         players.add(player);
     }
 
@@ -84,5 +92,36 @@ public class GamePlaceholder {
 
     public void removePlayer(Player player) {
         this.players.remove(player);
+    }
+
+    public GameMap getMap() {
+        return this.map;
+    }
+
+    public void createGameMap() throws Exception {
+        this.map = utils.gamePlaceholderToGame(this);
+
+        /* Assign the map to each player */
+        for (Player player : players) {
+            player.setMap(map);
+        }
+
+        /* Assign the map to each computer player */
+        for (ComputerPlayer computerPlayer : computerPlayers) {
+            computerPlayer.setMap(map);
+        }
+    }
+
+    public List<ComputerPlayer> getComputerPlayers() {
+        return this.computerPlayers;
+    }
+
+    public void addComputerPlayer(Player player) {
+        computerPlayers.add(new CompositePlayer(player, player.getMap()));
+        players.add(player);
+    }
+
+    public boolean isStarted() {
+        return map != null;
     }
 }

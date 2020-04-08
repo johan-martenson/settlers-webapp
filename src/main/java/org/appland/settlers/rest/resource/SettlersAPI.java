@@ -2,13 +2,20 @@ package org.appland.settlers.rest.resource;
 
 import org.appland.settlers.maps.MapFile;
 import org.appland.settlers.model.Building;
+import org.appland.settlers.model.BuildingCapturedMessage;
+import org.appland.settlers.model.BuildingLostMessage;
 import org.appland.settlers.model.Crop;
 import org.appland.settlers.model.Flag;
 import org.appland.settlers.model.GameMap;
+import org.appland.settlers.model.GeologistFindMessage;
 import org.appland.settlers.model.Headquarter;
 import org.appland.settlers.model.LandDataPoint;
 import org.appland.settlers.model.LandStatistics;
 import org.appland.settlers.model.Material;
+import org.appland.settlers.model.Message;
+import org.appland.settlers.model.MilitaryBuildingOccupiedMessage;
+import org.appland.settlers.model.MilitaryBuildingReadyMessage;
+import org.appland.settlers.model.NoMoreResourcesMessage;
 import org.appland.settlers.model.Player;
 import org.appland.settlers.model.Point;
 import org.appland.settlers.model.ProductionDataPoint;
@@ -18,7 +25,9 @@ import org.appland.settlers.model.Sign;
 import org.appland.settlers.model.Size;
 import org.appland.settlers.model.StatisticsManager;
 import org.appland.settlers.model.Stone;
+import org.appland.settlers.model.StoreHouseIsReadyMessage;
 import org.appland.settlers.model.Tree;
+import org.appland.settlers.model.UnderAttackMessage;
 import org.appland.settlers.model.WildAnimal;
 import org.appland.settlers.model.Worker;
 import org.appland.settlers.rest.GameTicker;
@@ -53,6 +62,14 @@ import static org.appland.settlers.model.Material.SHIELD;
 import static org.appland.settlers.model.Material.STONE;
 import static org.appland.settlers.model.Material.SWORD;
 import static org.appland.settlers.model.Material.WOOD;
+import static org.appland.settlers.model.Message.MessageType.BUILDING_CAPTURED;
+import static org.appland.settlers.model.Message.MessageType.BUILDING_LOST;
+import static org.appland.settlers.model.Message.MessageType.GEOLOGIST_FIND;
+import static org.appland.settlers.model.Message.MessageType.MILITARY_BUILDING_OCCUPIED;
+import static org.appland.settlers.model.Message.MessageType.MILITARY_BUILDING_READY;
+import static org.appland.settlers.model.Message.MessageType.NO_MORE_RESOURCES;
+import static org.appland.settlers.model.Message.MessageType.STORE_HOUSE_IS_READY;
+import static org.appland.settlers.model.Message.MessageType.UNDER_ATTACK;
 
 @Path("/settlers/api")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -75,18 +92,18 @@ public class SettlersAPI {
     @Context
     ServletContext context;
 
-    private final List<GameMap> games;
+    private final List<GameResource> startedGames;
     private final JSONParser parser;
-    private final List<GamePlaceholder> gamePlaceholders;
+    private final List<GameResource> gameResources;
 
     public SettlersAPI() {
-        games = new ArrayList<>();
+        startedGames = new ArrayList<>();
 
         idManager = new IdManager();
         utils = new Utils(idManager);
 
         parser = new JSONParser();
-        gamePlaceholders = new ArrayList<>();
+        gameResources = new ArrayList<>();
     }
 
     @GET
@@ -118,10 +135,22 @@ public class SettlersAPI {
 
     @GET
     @Path("/games")
-    public Response getGames() {
-        JSONArray jsonGames = utils.gamesToJson(games);
+    public Response getStartedGames() {
+        List<GameMap> startedGameMaps = new ArrayList<>();
+        List<GameResource> notStartedGames = new ArrayList<>();
 
-        jsonGames.addAll(utils.gamePlaceholdersToJson(gamePlaceholders));
+        for (GameResource gameResource : gameResources) {
+
+            if (gameResource.isStarted()) {
+                startedGameMaps.add(gameResource.getMap());
+            } else {
+                notStartedGames.add(gameResource);
+            }
+        }
+
+        JSONArray jsonGames = utils.gamesToJson(startedGameMaps);
+
+        jsonGames.addAll(utils.gamePlaceholdersToJson(notStartedGames));
 
         return Response.status(200).entity(jsonGames.toJSONString()).build();
     }
@@ -150,7 +179,7 @@ public class SettlersAPI {
 
             return Response.status(200).entity(jsonGame.toJSONString()).build();
         } else {
-            JSONObject jsonGame = utils.gamePlaceholderToJson((GamePlaceholder)gameObject);
+            JSONObject jsonGame = utils.gamePlaceholderToJson((GameResource)gameObject);
 
             return Response.status(200).entity(jsonGame.toJSONString()).build();
         }
@@ -176,24 +205,29 @@ public class SettlersAPI {
         } else {
 
             /* Create a placeholder if there are missing attributes */
-            GamePlaceholder gamePlaceholder = new GamePlaceholder();
+            GameResource gameResource = new GameResource(utils);
 
             if (jsonGame.containsKey("name")) {
-                gamePlaceholder.setName((String) jsonGame.get("name"));
+                gameResource.setName((String) jsonGame.get("name"));
             }
 
             if (jsonGame.containsKey("players")) {
-                gamePlaceholder.setPlayers(utils.jsonToPlayers((JSONArray) jsonGame.get("players")));
+                System.out.println("Setting players " + jsonGame.get("players"));
+                gameResource.setPlayers(utils.jsonToPlayers((JSONArray) jsonGame.get("players")));
+                System.out.println("Set players " + gameResource.getPlayers());
+                System.out.println("Set computer players " + gameResource.getComputerPlayers());
             }
 
             if (jsonGame.containsKey("mapId")) {
+                System.out.println("Map id included " + jsonGame.get("mapId"));
                 String mapId = (String) jsonGame.get("mapId");
-                gamePlaceholder.setMap((MapFile) idManager.getObject(Integer.parseInt(mapId)));
+                System.out.println("Map file " + idManager.getObject(Integer.parseInt(mapId)));
+                gameResource.setMap((MapFile) idManager.getObject(Integer.parseInt(mapId)));
             }
 
-            gamePlaceholders.add(gamePlaceholder);
+            gameResources.add(gameResource);
 
-            return Response.status(201).entity(utils.gamePlaceholderToJson(gamePlaceholder).toJSONString()).build();
+            return Response.status(201).entity(utils.gamePlaceholderToJson(gameResource).toJSONString()).build();
         }
 
         //return Response.status(201).entity("").build();
@@ -208,13 +242,13 @@ public class SettlersAPI {
 
         JSONObject jsonUpdates = (JSONObject) parser.parse(body);
 
-        if (jsonUpdates.containsKey("mapId") && gameObject instanceof GamePlaceholder) {
+        if (jsonUpdates.containsKey("mapId") && gameObject instanceof GameResource) {
             String updatedMapFileId = (String) jsonUpdates.get("mapId");
 
             MapFile updatedMapFile = (MapFile) idManager.getObject(Integer.parseInt(updatedMapFileId));
 
-            if (gameObject instanceof GamePlaceholder) {
-                GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+            if (gameObject instanceof GameResource) {
+                GameResource gamePlaceholder = (GameResource) gameObject;
 
                 gamePlaceholder.setMap(updatedMapFile);
 
@@ -224,19 +258,20 @@ public class SettlersAPI {
             }
         }
 
-        if (jsonUpdates.containsKey("status") && gameObject instanceof GamePlaceholder) {
+        if (jsonUpdates.containsKey("status") && gameObject instanceof GameResource) {
             String updatedStatus = (String) jsonUpdates.get("status");
 
-            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+            GameResource gameResource = (GameResource) gameObject;
 
             if (updatedStatus.equals("STARTED")) {
 
-                /* Convert the game placeholder to a game map */
-                GameMap map = utils.gamePlaceholderToGame(gamePlaceholder);
-                games.add(map);
-                gamePlaceholders.remove(gamePlaceholder);
+                /* Create the game map */
+                gameResource.createGameMap();
+                GameMap map = gameResource.getMap();
 
-                idManager.updateObject(gameObject, map);
+                startedGames.add(gameResource);
+
+                idManager.updateObject(gameObject, gameResource.getMap());
 
                 /* Place a headquarter for each player */
                 List<Player> players = map.getPlayers();
@@ -252,12 +287,12 @@ public class SettlersAPI {
                 }
 
                 /* Adjust the initial set of resources */
-                utils.adjustResources(map, gamePlaceholder.getResources());
+                utils.adjustResources(map, gameResource.getResources());
 
                 /* Start the time for the game by adding it to the game ticker */
                 GameTicker gameTicker = (GameTicker) context.getAttribute(GAME_TICKER);
 
-                gameTicker.startGame(map);
+                gameTicker.startGame(gameResource);
 
                 return Response.status(200).entity(utils.gameToJson(map).toJSONString()).build();
             }
@@ -265,10 +300,10 @@ public class SettlersAPI {
             return Response.status(405).build();
         }
 
-        if (jsonUpdates.containsKey("resources") && gameObject instanceof GamePlaceholder) {
+        if (jsonUpdates.containsKey("resources") && gameObject instanceof GameResource) {
             ResourceLevel level = ResourceLevel.valueOf((String) jsonUpdates.get("resources"));
 
-            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+            GameResource gamePlaceholder = (GameResource) gameObject;
 
             gamePlaceholder.setResource(level);
 
@@ -289,10 +324,10 @@ public class SettlersAPI {
             return Response.status(404).build();
         }
 
-        if (gameObject instanceof GamePlaceholder) {
-            gamePlaceholders.remove(gameObject);
+        if (gameObject instanceof GameResource) {
+            gameResources.remove(gameObject);
         } else {
-            games.remove(gameObject);
+            startedGames.remove(gameObject);
         }
 
         /* Free up the id */
@@ -306,8 +341,8 @@ public class SettlersAPI {
     public Response getPlayersForGame(@PathParam("id") int id) {
         Object gameObject = idManager.getObject(id);
 
-        if (gameObject instanceof GamePlaceholder) {
-            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+        if (gameObject instanceof GameResource) {
+            GameResource gamePlaceholder = (GameResource) gameObject;
 
             return Response.status(200).entity(utils.playersToJson(gamePlaceholder.getPlayers()).toJSONString()).build();
         } else {
@@ -324,16 +359,25 @@ public class SettlersAPI {
     public Response addPlayerToGame(@PathParam("gameId") String gameId, String playerBody) throws ParseException {
         JSONObject jsonPlayer = (JSONObject) parser.parse(playerBody);
 
+        boolean isComputer = false;
+
+        if (jsonPlayer.getOrDefault("type", "").equals("COMPUTER_PLAYER")) {
+            isComputer = true;
+        }
+
         Player player = utils.jsonToPlayer(jsonPlayer);
 
         Object gameObject = idManager.getObject(Integer.parseInt(gameId));
 
-        if (gameObject instanceof GamePlaceholder) {
-            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+        if (gameObject instanceof GameResource) {
+            GameResource gameResource = (GameResource) gameObject;
 
-            gamePlaceholder.addPlayer(player);
+            if (isComputer) {
+                gameResource.addComputerPlayer(player);
+            } else {
+                gameResource.addHumanPlayer(player);
+            }
         }
-
 
         return Response.status(201).entity(utils.playerToJson(player).toJSONString()).build();
     }
@@ -341,7 +385,7 @@ public class SettlersAPI {
     @PATCH
     @Path("/games/{gameId}/players/{playerId}")
     public Response updatePlayerInGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, String body) throws ParseException {
-        GamePlaceholder gamePlaceholder = (GamePlaceholder) idManager.getObject(Integer.parseInt(gameId));
+        GameResource gamePlaceholder = (GameResource) idManager.getObject(Integer.parseInt(gameId));
         Player player = (Player) idManager.getObject(Integer.parseInt(playerId));
         JSONObject jsonUpdates = (JSONObject) parser.parse(body);
 
@@ -362,7 +406,7 @@ public class SettlersAPI {
     @DELETE
     @Path("/games/{gameId}/players/{playerId}")
     public Response removePlayerFromGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
-        GamePlaceholder gamePlaceholder = (GamePlaceholder) idManager.getObject(Integer.parseInt(gameId));
+        GameResource gamePlaceholder = (GameResource) idManager.getObject(Integer.parseInt(gameId));
         Player player = (Player) idManager.getObject(Integer.parseInt(playerId));
 
         // TODO: verify that the player is in the right game
@@ -385,8 +429,8 @@ public class SettlersAPI {
         }
 
         /* Check that the player belongs to the given game */
-        if (gameObject instanceof GamePlaceholder) {
-            GamePlaceholder gamePlaceholder = (GamePlaceholder) gameObject;
+        if (gameObject instanceof GameResource) {
+            GameResource gamePlaceholder = (GameResource) gameObject;
 
             /* Return 404 if the player does not belong to the given game */
             if (!gamePlaceholder.getPlayers().contains(player)) {
@@ -551,8 +595,6 @@ public class SettlersAPI {
         JSONObject jsonHouseModification = (JSONObject) parser.parse(body);
 
         JSONObject jsonResponse = new JSONObject();
-
-        System.out.println(jsonHouseModification.keySet());
 
         boolean doEvacuationChange = jsonHouseModification.containsKey("evacuate");
         boolean doPromotionsChange = jsonHouseModification.containsKey("promotionsEnabled");
@@ -1042,4 +1084,79 @@ public class SettlersAPI {
 
         return Response.status(200).entity(jsonResponse.toJSONString()).build();
     }
+
+    @GET
+    @Path("/games/{gameId}/players/{playerId}/gameMessages")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getGameMessagesForPlayer(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId) {
+
+        GameMap map = (GameMap) idManager.getObject(gameId);
+        Player player = (Player) idManager.getObject(playerId);
+
+        /*
+        * [
+        *     {'type': 'MILITARY_BUILDING_READY',
+        *       'houseId': '123'
+        *     },
+        *
+        *     {'type': 'NO_MORE_RESOURCES',
+        *        'houseId': '123'
+        *     },
+        *
+        *     {'type': 'BORDER_EXPANDED',
+        *        'point': {x: 4, y: 8}
+        *     }
+        *
+        *     {'type': 'UNDER_ATTACK',
+        *        'houseId': '1234'
+        *     }
+        *
+        *     {'type': 'GEOLOGIST_FIND',
+        *        'point': {...}
+        *        'material': 'IRON' | 'WATER' | 'COAL' | 'STONE'
+        *     }
+        * ]
+        * */
+
+        JSONArray jsonGameMessages = new JSONArray();
+
+        for (Message message : player.getMessages()) {
+            if (message.getMessageType() == MILITARY_BUILDING_READY) {
+                JSONObject jsonMilitaryBuildingOccupiedMessage = utils.militaryBuildingReadyMessageToJson((MilitaryBuildingReadyMessage) message);
+
+                jsonGameMessages.add(jsonMilitaryBuildingOccupiedMessage);
+            } else if (message.getMessageType() == NO_MORE_RESOURCES) {
+                JSONObject jsonNoMoreResourcesMessage = utils.noMoreResourcesMessageToJson((NoMoreResourcesMessage) message);
+
+                jsonGameMessages.add(jsonNoMoreResourcesMessage);
+            } else if (message.getMessageType() == MILITARY_BUILDING_OCCUPIED) {
+                JSONObject jsonBorderExpandedMessage = utils.militaryBuildingOccupiedMessageToJson((MilitaryBuildingOccupiedMessage) message);
+
+                jsonGameMessages.add(jsonBorderExpandedMessage);
+            } else if (message.getMessageType() == UNDER_ATTACK) {
+                JSONObject jsonUnderAttackMessage = utils.underAttackMessageToJson((UnderAttackMessage) message);
+
+                jsonGameMessages.add(jsonUnderAttackMessage);
+            } else if (message.getMessageType() == GEOLOGIST_FIND) {
+                JSONObject jsonGeologistFindMessage = utils.geologistFindMessageToJson((GeologistFindMessage) message);
+
+                jsonGameMessages.add(jsonGeologistFindMessage);
+            } else if (message.getMessageType() == BUILDING_LOST) {
+                JSONObject jsonBuildingLostMessage = utils.buildingLostMessageToJson((BuildingLostMessage) message);
+
+                jsonGameMessages.add(jsonBuildingLostMessage);
+            } else if (message.getMessageType() == BUILDING_CAPTURED) {
+                JSONObject jsonBuildingCaptured = utils.buildingCapturedMessageToJson((BuildingCapturedMessage) message);
+
+                jsonGameMessages.add(jsonBuildingCaptured);
+            } else if (message.getMessageType() == STORE_HOUSE_IS_READY) {
+                JSONObject jsonStoreHouseIsReady = utils.jsonStoreHouseIsReadyMessageToJson((StoreHouseIsReadyMessage) message);
+
+                jsonGameMessages.add(jsonStoreHouseIsReady);
+            }
+        }
+
+        return Response.status(200).entity(jsonGameMessages.toJSONString()).build();
+    }
+
 }
