@@ -27,6 +27,12 @@ class IdManager {
         return objectToId.get(o);
     }
 
+    Object getObject(String id) {
+        int numberId = Integer.parseInt(id);
+
+        return idToObject.get(numberId);
+    }
+
     Object getObject(int id) {
         return idToObject.get(id);
     }

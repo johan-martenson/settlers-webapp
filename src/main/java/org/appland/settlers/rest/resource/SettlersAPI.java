@@ -56,6 +56,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.lang.String.format;
+import static org.appland.settlers.model.Material.COIN;
 import static org.appland.settlers.model.Material.GOLD;
 import static org.appland.settlers.model.Material.PLANK;
 import static org.appland.settlers.model.Material.SHIELD;
@@ -78,20 +80,22 @@ public class SettlersAPI {
 
     public final static String MAP_FILE_LIST = "mapFileList";
     public static final String GAME_TICKER = "gameTicker";
-    public final List<Material> PRODUCTION_STATISTICS_MATERIALS = Arrays.asList(
+
+    public static final List<Material> PRODUCTION_STATISTICS_MATERIALS = Arrays.asList(
             WOOD,
             STONE,
             PLANK,
+            COIN,
             GOLD,
             SWORD,
             SHIELD
     );
 
-    private final IdManager idManager;
-    private final Utils utils;
     @Context
     ServletContext context;
 
+    private final IdManager idManager;
+    private final Utils utils;
     private final List<GameResource> startedGames;
     private final JSONParser parser;
     private final List<GameResource> gameResources;
@@ -120,15 +124,33 @@ public class SettlersAPI {
     @GET
     @Path("/maps/{mapId}")
     public Response getMap(@PathParam("mapId") String mapId) {
-        MapFile mapFile = (MapFile) idManager.getObject(Integer.parseInt(mapId));
+        MapFile mapFile = (MapFile) idManager.getObject(mapId);
+
+        if (mapFile == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No map with id %s exists", mapId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         return Response.status(200).entity(utils.mapFileToJson(mapFile).toJSONString()).build();
     }
 
     @GET
     @Path("/maps/{mapId}/terrain")
-    public Response getTerrainForMap(@PathParam("mapId") String id) throws Exception {
-        MapFile mapFile = (MapFile)idManager.getObject(Integer.parseInt(id));
+    public Response getTerrainForMap(@PathParam("mapId") String mapId) throws Exception {
+        MapFile mapFile = (MapFile)idManager.getObject(mapId);
+
+        if (mapFile == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No map with id %s exists", mapId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         return Response.status(200).entity(utils.mapFileTerrainToJson(mapFile).toJSONString()).build();
     }
@@ -157,20 +179,31 @@ public class SettlersAPI {
 
     @DELETE
     @Path("/maps/{mapId}")
-    public Response deleteMap() {
+    public Response deleteMap(@PathParam("mapId") String mapId) {
 
-        return Response.status(405).build();
+        JSONObject message = new JSONObject();
+
+        message.put("status", "Error");
+        message.put("message", "Cannot delete maps.");
+
+        return Response.status(405).entity(message.toJSONString()).build();
     }
 
     @GET
     @Path("/games/{id}")
-    public Response getGame(@PathParam("id") int id) {
+    public Response getGame(@PathParam("id") String gameId) {
 
-        Object gameObject = idManager.getObject(id);
+        Object gameObject = idManager.getObject(gameId);
 
         /* Return 404 if the game doesn't exist */
+
         if (gameObject == null) {
-            return Response.status(404).build();
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
         }
 
         /* Return the game as a JSON document */
@@ -212,16 +245,12 @@ public class SettlersAPI {
             }
 
             if (jsonGame.containsKey("players")) {
-                System.out.println("Setting players " + jsonGame.get("players"));
                 gameResource.setPlayers(utils.jsonToPlayers((JSONArray) jsonGame.get("players")));
-                System.out.println("Set players " + gameResource.getPlayers());
-                System.out.println("Set computer players " + gameResource.getComputerPlayers());
             }
 
             if (jsonGame.containsKey("mapId")) {
-                System.out.println("Map id included " + jsonGame.get("mapId"));
                 String mapId = (String) jsonGame.get("mapId");
-                System.out.println("Map file " + idManager.getObject(Integer.parseInt(mapId)));
+
                 gameResource.setMap((MapFile) idManager.getObject(Integer.parseInt(mapId)));
             }
 
@@ -229,8 +258,6 @@ public class SettlersAPI {
 
             return Response.status(201).entity(utils.gamePlaceholderToJson(gameResource).toJSONString()).build();
         }
-
-        //return Response.status(201).entity("").build();
     }
 
     @PATCH
@@ -238,14 +265,23 @@ public class SettlersAPI {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response modifyGame(@PathParam("gameId") String gameId, String body) throws Exception {
-        Object gameObject = idManager.getObject(Integer.parseInt(gameId));
+        Object gameObject = idManager.getObject(gameId);
+
+        if (gameObject == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonUpdates = (JSONObject) parser.parse(body);
 
         if (jsonUpdates.containsKey("mapId") && gameObject instanceof GameResource) {
             String updatedMapFileId = (String) jsonUpdates.get("mapId");
 
-            MapFile updatedMapFile = (MapFile) idManager.getObject(Integer.parseInt(updatedMapFileId));
+            MapFile updatedMapFile = (MapFile) idManager.getObject(updatedMapFileId);
 
             if (gameObject instanceof GameResource) {
                 GameResource gamePlaceholder = (GameResource) gameObject;
@@ -254,7 +290,7 @@ public class SettlersAPI {
 
                 return Response.status(200).entity(utils.gamePlaceholderToJson(gamePlaceholder).toJSONString()).build();
             } else {
-                return Response.status(500).build();
+                return Response.status(405).build(); // Add message - cannot modify map of a running game
             }
         }
 
@@ -297,7 +333,7 @@ public class SettlersAPI {
                 return Response.status(200).entity(utils.gameToJson(map).toJSONString()).build();
             }
 
-            return Response.status(405).build();
+            return Response.status(400).build();  // Add a bad request message
         }
 
         if (jsonUpdates.containsKey("resources") && gameObject instanceof GameResource) {
@@ -311,17 +347,22 @@ public class SettlersAPI {
         }
 
         /* Return bad request (400) if there is no mapFileId included */
-        return Response.status(400).build();
+        return Response.status(400).build(); // The scope of this is all changes, not only mapId
     }
 
     @DELETE
     @Path("/games/{gameId}")
     public Response deleteGame(@PathParam("gameId") String gameId) {
-        Object gameObject = idManager.getObject(Integer.parseInt(gameId));
+        Object gameObject = idManager.getObject(gameId);
 
-        /* Return 404 if the game doesn't exist */
+
         if (gameObject == null) {
-            return Response.status(404).build();
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
         }
 
         if (gameObject instanceof GameResource) {
@@ -337,9 +378,18 @@ public class SettlersAPI {
     }
 
     @GET
-    @Path("/games/{id}/players")
-    public Response getPlayersForGame(@PathParam("id") int id) {
-        Object gameObject = idManager.getObject(id);
+    @Path("/games/{gameId}/players")
+    public Response getPlayersForGame(@PathParam("gameId") String gameId) {
+        Object gameObject = idManager.getObject(gameId);
+
+        if (gameObject == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         if (gameObject instanceof GameResource) {
             GameResource gamePlaceholder = (GameResource) gameObject;
@@ -357,7 +407,17 @@ public class SettlersAPI {
     @POST
     @Path("/games/{gameId}/players")
     public Response addPlayerToGame(@PathParam("gameId") String gameId, String playerBody) throws ParseException {
+        Object gameObject = idManager.getObject(gameId);
         JSONObject jsonPlayer = (JSONObject) parser.parse(playerBody);
+
+        if (gameObject == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         boolean isComputer = false;
 
@@ -366,8 +426,6 @@ public class SettlersAPI {
         }
 
         Player player = utils.jsonToPlayer(jsonPlayer);
-
-        Object gameObject = idManager.getObject(Integer.parseInt(gameId));
 
         if (gameObject instanceof GameResource) {
             GameResource gameResource = (GameResource) gameObject;
@@ -385,12 +443,36 @@ public class SettlersAPI {
     @PATCH
     @Path("/games/{gameId}/players/{playerId}")
     public Response updatePlayerInGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, String body) throws ParseException {
-        GameResource gamePlaceholder = (GameResource) idManager.getObject(Integer.parseInt(gameId));
-        Player player = (Player) idManager.getObject(Integer.parseInt(playerId));
+        GameResource gamePlaceholder = (GameResource) idManager.getObject(gameId);
+        Player player = (Player) idManager.getObject(playerId);
         JSONObject jsonUpdates = (JSONObject) parser.parse(body);
 
-        // TODO: verify that the player is in the right game
-        // TODO: verify that the player exists
+        if (gamePlaceholder == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!gamePlaceholder.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         if (jsonUpdates.containsKey("name")) {
             player.setName((String)jsonUpdates.get("name"));
@@ -406,13 +488,37 @@ public class SettlersAPI {
     @DELETE
     @Path("/games/{gameId}/players/{playerId}")
     public Response removePlayerFromGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
-        GameResource gamePlaceholder = (GameResource) idManager.getObject(Integer.parseInt(gameId));
-        Player player = (Player) idManager.getObject(Integer.parseInt(playerId));
+        GameResource gameResource = (GameResource) idManager.getObject(gameId);
+        Player player = (Player) idManager.getObject(playerId);
 
-        // TODO: verify that the player is in the right game
-        // TODO: verify that the player exists
+        if (gameResource == null) {
+            JSONObject message = new JSONObject();
 
-        gamePlaceholder.removePlayer(player);
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!gameResource.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        gameResource.removePlayer(player);
 
         return Response.status(200).entity(utils.playerToJson(player).toJSONString()).build();
     }
@@ -420,21 +526,51 @@ public class SettlersAPI {
     @GET
     @Path("/games/{gameId}/players/{playerId}")
     public Response getPlayerForGame(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
-        Player player = (Player) idManager.getObject(Integer.parseInt(playerId));
-        Object gameObject = idManager.getObject(Integer.parseInt(gameId));
+        Player player = (Player) idManager.getObject(playerId);
+        Object gameObject = idManager.getObject(gameId);
 
-        /* Return 404 if the game doesn't exist */
         if (gameObject == null) {
-            return Response.status(404).build();
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
         }
 
         /* Check that the player belongs to the given game */
         if (gameObject instanceof GameResource) {
-            GameResource gamePlaceholder = (GameResource) gameObject;
+            GameResource gameResource = (GameResource) gameObject;
 
-            /* Return 404 if the player does not belong to the given game */
-            if (!gamePlaceholder.getPlayers().contains(player)) {
-                return Response.status(404).build();
+            if (!gameResource.getPlayers().contains(player)) {
+                JSONObject message = new JSONObject();
+
+                message.put("status", "Error");
+                message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+                return Response.status(404).entity(message.toJSONString()).build();
+            }
+        }
+
+        if (gameObject instanceof GameMap) {
+            GameMap map = (GameMap) gameObject;
+
+            if (!map.getPlayers().contains(player)) {
+                JSONObject message = new JSONObject();
+
+                message.put("status", "Error");
+                message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+                return Response.status(404).entity(message.toJSONString()).build();
             }
         }
 
@@ -444,18 +580,46 @@ public class SettlersAPI {
 
     @GET
     @Path("/games/{gameId}/map/terrain")
-    public Response getTerrainForMapInGame(@PathParam("gameId") int id) {
-        GameMap map = (GameMap)idManager.getObject(id);
+    public Response getTerrainForMapInGame(@PathParam("gameId") String gameId) {
+        GameMap map = (GameMap)idManager.getObject(gameId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
         JSONObject terrain = utils.terrainToJson(map);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         return Response.status(200).entity(terrain.toJSONString()).build();
     }
 
     @PUT
     @Path("/games/{gameId}/map/points")
-    public Response putPoint(@PathParam("gameId") int gameId, @QueryParam("x") int x, @QueryParam("y") int y, String body) throws Exception {
+    public Response putPoint(@PathParam("gameId") String gameId, @QueryParam("x") int x, @QueryParam("y") int y, String body) throws Exception {
         Point point = new Point(x, y);
         GameMap map = (GameMap)idManager.getObject(gameId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonBody = (JSONObject) parser.parse(body);
         JSONObject response = new JSONObject();
@@ -483,10 +647,38 @@ public class SettlersAPI {
 
     @GET
     @Path("/games/{gameId}/map/points")
-    public Response getPoint(@PathParam("gameId") int gameId, @QueryParam("playerId") int playerId, @QueryParam("x") int x, @QueryParam("y") int y) throws Exception {
+    public Response getPoint(@PathParam("gameId") String gameId, @QueryParam("playerId") String playerId, @QueryParam("x") int x, @QueryParam("y") int y) throws Exception {
         Point point = new Point(x, y);
         GameMap map = (GameMap)idManager.getObject(gameId);
         Player player = (Player)idManager.getObject(playerId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonPoint = utils.pointToDetailedJson(point, player, map);
 
@@ -495,31 +687,119 @@ public class SettlersAPI {
 
     @DELETE
     @Path("/games/{gameId}/players/{playerId}/flags/{flagId}")
-    public Response removeFlag(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("flagId") int flagId) throws Exception {
+    public Response removeFlag(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("flagId") int flagId) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
         Flag flag = (Flag) idManager.getObject(flagId);
 
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!map.getFlags().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No flag with id %s exists in game with id %s", flagId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
         JSONObject jsonResponse = new JSONObject();
 
-        if (player.equals(flag.getPlayer())) {
+        if (!player.equals(flag.getPlayer())) {
+            JSONObject message = new JSONObject();
 
-            synchronized (map) {
-                map.removeFlag(flag);
-            }
-
-            jsonResponse.put("message", "Flag removed");
-        } else {
-            jsonResponse.put("message", "Cannot remove flag for other player");
+            message.put("status", "Error");
+            message.put("message", format("Cannot remove flag from other player"));
+            return Response.status(404).entity(message.toJSONString()).build();
         }
+
+        synchronized (map) {
+            map.removeFlag(flag);
+        }
+
+        jsonResponse.put("message", "Flag removed");
 
         return Response.status(200).entity(jsonResponse.toJSONString()).build();
     }
 
     @GET
     @Path("/games/{gameId}/players/{playerId}/houses/{houseId}")
-    public Response getHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("houseId") int houseId) {
+    public Response getHouse(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("houseId") String houseId) {
+        GameMap map = (GameMap) idManager.getObject(gameId);
+        Player player = (Player) idManager.getObject(playerId);
         Building building = (Building) idManager.getObject(houseId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!map.getBuildings().contains(building)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No building with id %s exists in game with id %s", houseId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!player.getBuildings().contains(building)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No building with id %s belongs to the player with id %s", houseId, playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonHouse;
 
@@ -532,10 +812,56 @@ public class SettlersAPI {
 
     @DELETE
     @Path("/games/{gameId}/players/{playerId}/houses/{houseId}")
-    public Response removeHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("houseId") int houseId) throws Exception {
+    public Response removeHouse(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("houseId") String houseId) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
         Building building = (Building) idManager.getObject(houseId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!map.getBuildings().contains(building)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No building with id %s exists in game with id %s", houseId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!player.getBuildings().contains(building)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No building with id %s belongs to the player with id %s", houseId, playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonResponse = new JSONObject();
 
@@ -546,8 +872,6 @@ public class SettlersAPI {
             }
 
             jsonResponse.put("message", "Tore down building");
-        } else {
-            jsonResponse.put("message", "Cannot tear down building for other player");
         }
 
         return Response.status(200).entity(jsonResponse.toJSONString()).build();
@@ -557,10 +881,37 @@ public class SettlersAPI {
     @Path("/games/{gameId}/players/{playerId}/houses")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getHouses(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId) {
+    public Response getHouses(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
+        GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
 
-        //FIXME: Verify that the player is connected to the game
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         return Response.status(200).entity(utils.housesToJson(player.getBuildings()).toJSONString()).build();
     }
@@ -569,9 +920,37 @@ public class SettlersAPI {
     @Path("/games/{gameId}/players/{playerId}/houses")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String body) throws Exception {
+    public Response createHouse(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, String body) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonHouse = (JSONObject) parser.parse(body);
 
@@ -583,14 +962,61 @@ public class SettlersAPI {
             map.placeBuilding(building, point);
         }
 
-        return Response.status(200).entity(utils.houseToJson(building).toJSONString()).build();
+        return Response.status(201).entity(utils.houseToJson(building).toJSONString()).build();
     }
 
     @PUT
     @Path("/games/{gameId}/players/{playerId}/houses/{houseId}")
-    public Response updateHouse(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("houseId") int houseId, String body) throws Exception {
+    public Response updateHouse(@PathParam("gameId") int gameId, @PathParam("playerId") String playerId, @PathParam("houseId") String houseId, String body) throws Exception {
+        GameMap map = (GameMap) idManager.getObject(gameId);
         Building building = (Building) idManager.getObject(houseId);
         Player player = (Player) idManager.getObject(playerId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!map.getBuildings().contains(building)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No building with id %s exists in game with id %s", houseId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (!player.getBuildings().contains(building)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No building with id %s belongs to the player with id %s", houseId, playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonHouseModification = (JSONObject) parser.parse(body);
 
@@ -650,9 +1076,37 @@ public class SettlersAPI {
 
     @POST
     @Path("/games/{gameId}/players/{playerId}/roads")
-    public Response createRoad(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String bodyRoad) throws Exception {
+    public Response createRoad(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, String bodyRoad) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonRoad = (JSONObject) parser.parse(bodyRoad);
 
@@ -674,15 +1128,62 @@ public class SettlersAPI {
             }
         }
 
-        return Response.status(200).entity(utils.roadToJson(road).toJSONString()).build();
+        return Response.status(201).entity(utils.roadToJson(road).toJSONString()).build();
     }
 
     @DELETE
     @Path("/games/{gameId}/players/{playerId}/roads/{roadId}")
-    public Response removeRoad(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("roadId") int roadId) {
+    public Response removeRoad(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("roadId") String roadId) {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
         Road road = (Road) idManager.getObject(roadId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (road == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No road with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the road belongs to the given player */
+        if (!road.getPlayer().equals(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("The road with id %s does not belong to the player with id %s", roadId, playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject message = new JSONObject();
 
@@ -699,37 +1200,141 @@ public class SettlersAPI {
 
     @POST
     @Path("/games/{gameId}/players/{playerId}/flags")
-    public Response createFlag(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String bodyFlag) throws Exception {
+    public Response createFlag(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, String bodyFlag) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
         JSONObject jsonPoint = (JSONObject) parser.parse(bodyFlag);
 
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
         Point point = utils.jsonToPoint(jsonPoint);
 
-        Flag flag = null;
+        Flag flag;
 
         synchronized (map) {
             flag = map.placeFlag(player, point);
+        }
+
+        return Response.status(201).entity(utils.flagToJson(flag).toJSONString()).build();
+    }
+
+    @GET
+    @Path("/games/{gameId}/players/{playerId}/flags/{flagId}")
+    public Response getFlag(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("flagId") String flagId) {
+        GameMap map = (GameMap) idManager.getObject(gameId);
+        Player player = (Player) idManager.getObject(playerId);
+        Flag flag = (Flag) idManager.getObject(flagId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (flag == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No flag with id %s exists", flagId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!flag.getPlayer().equals(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("The flag with id %s does not belong to the player with id %s", flagId, playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
         }
 
         return Response.status(200).entity(utils.flagToJson(flag).toJSONString()).build();
     }
 
     @GET
-    @Path("/games/{gameId}/players/{playerId}/flags/{flagId}")
-    public Response getFlag(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, @PathParam("flagId") int flagId) {
-        // TODO: check that the flag belongs to the player and that the player belongs to the game
-        Flag flag = (Flag) idManager.getObject(flagId);
-
-        return Response.status(200).entity(utils.flagToJson(flag).toJSONString()).build();
-    }
-
-    @GET
     @Path("/games/{gameId}/players/{playerId}/view")
-    public Response getViewForPlayer(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId) {
+    public Response getViewForPlayer(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
 
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         /* Create instances outside the synchronized block when possible */
         JSONObject view = new JSONObject();
@@ -941,9 +1546,37 @@ public class SettlersAPI {
     @POST
     @Path("/rpc/games/{gameId}/players/{playerId}/find-new-road")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response findNewRoad(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId, String bodyFindNewRoad) throws ParseException {
+    public Response findNewRoad(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, String bodyFindNewRoad) throws ParseException {
         GameMap map = (GameMap)idManager.getObject(gameId);
         Player player = (Player)idManager.getObject(playerId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonNewRoadParameters = (JSONObject) parser.parse(bodyFindNewRoad);
 
@@ -978,8 +1611,17 @@ public class SettlersAPI {
     @GET
     @Path("/games/{gameId}/statistics/land")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getLandStatistics(@PathParam("gameId") int gameId) {
+    public Response getLandStatistics(@PathParam("gameId") String gameId) {
         GameMap map = (GameMap)idManager.getObject(gameId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonResponse = new JSONObject();
 
@@ -1031,8 +1673,17 @@ public class SettlersAPI {
     @GET
     @Path("/games/{gameId}/statistics/production")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getMaterialStatistics(@PathParam("gameId") int gameId) {
+    public Response getMaterialStatistics(@PathParam("gameId") String gameId) {
         GameMap map = (GameMap)idManager.getObject(gameId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         JSONObject jsonResponse = new JSONObject();
 
@@ -1088,10 +1739,38 @@ public class SettlersAPI {
     @GET
     @Path("/games/{gameId}/players/{playerId}/gameMessages")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getGameMessagesForPlayer(@PathParam("gameId") int gameId, @PathParam("playerId") int playerId) {
+    public Response getGameMessagesForPlayer(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
 
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
+
+        if (map == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No game with id %s exists", gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        if (player == null) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists", playerId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
+
+        /* Check that the player belongs to the given game */
+        if (!map.getPlayers().contains(player)) {
+            JSONObject message = new JSONObject();
+
+            message.put("status", "Error");
+            message.put("message", format("No player with id %s exists in game with id %s", playerId, gameId));
+
+            return Response.status(404).entity(message.toJSONString()).build();
+        }
 
         /*
         * [
@@ -1158,5 +1837,4 @@ public class SettlersAPI {
 
         return Response.status(200).entity(jsonGameMessages.toJSONString()).build();
     }
-
 }

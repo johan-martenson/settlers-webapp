@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static io.restassured.RestAssured.given;
+import static org.appland.settlers.model.Material.COIN;
 import static org.appland.settlers.model.Material.GOLD;
 import static org.appland.settlers.model.Material.PLANK;
 import static org.appland.settlers.model.Material.SHIELD;
@@ -1675,7 +1676,7 @@ public class AppTest extends TestCase {
         Map statistics = getProductionStatisticsForGame(gameId);
 
         /* Verify that statistics for the required materials are available */
-        List<Material> requiredMaterials = Arrays.asList(WOOD, PLANK, STONE, GOLD, SWORD, SHIELD);
+        List<Material> requiredMaterials = Arrays.asList(WOOD, PLANK, STONE, GOLD, SWORD, SHIELD, COIN);
         List<Map> statisticsArray = (List<Map>)statistics.get("materialStatistics");
 
         for (Material material : requiredMaterials) {

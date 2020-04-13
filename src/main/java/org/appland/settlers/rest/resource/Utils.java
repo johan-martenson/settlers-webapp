@@ -612,7 +612,7 @@ class Utils {
         return jsonRoad;
     }
 
-    JSONObject borderToJson(Player player, int playerId) {
+    JSONObject borderToJson(Player player, String playerId) {
 
         /* Fill in borders */
         JSONObject jsonBorder = new JSONObject();
