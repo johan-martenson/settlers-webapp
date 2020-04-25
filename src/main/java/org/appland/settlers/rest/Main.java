@@ -1,14 +1,18 @@
 package org.appland.settlers.rest;
 
+import org.appland.settlers.rest.resource.WebsocketMonitor;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.websocket.jsr356.server.deploy.WebSocketServerContainerInitializer;
 import org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher;
+
+import javax.websocket.server.ServerContainer;
 
 public class Main {
 
-    private static final String APPLICATION_PATH = "/*";
+    private static final String APPLICATION_PATH = "/settlers/api/*";
+    private static final String WEBSOCKET_PATH = "/ws/*";
     private static final String CONTEXT_ROOT = "/";
 
     public static void main(String[] args) throws Exception {
@@ -24,7 +28,15 @@ public class Main {
 
         // Setup the basic Application "context" at "/".
         // This is also known as the handler tree (in Jetty speak).
-        final ServletContextHandler context = new ServletContextHandler(server, CONTEXT_ROOT);
+        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
+        context.setContextPath("/");
+        server.setHandler(context);
+
+        // Add javax.websocket support
+        ServerContainer container = WebSocketServerContainerInitializer.configureContext(context);
+
+        // Add echo endpoint to server container
+        container.addEndpoint(WebsocketMonitor.class);
 
         // Register the lifecycle listener
         context.addEventListener(new DeploymentListener());
@@ -34,10 +46,6 @@ public class Main {
         restEasyServlet.setInitParameter("resteasy.servlet.mapping.prefix", APPLICATION_PATH);
         restEasyServlet.setInitParameter("javax.ws.rs.Application", FatJarApplication.class.getName());
         context.addServlet(restEasyServlet, APPLICATION_PATH);
-
-        // Setup the DefaultServlet at "/".
-        final ServletHolder defaultServlet = new ServletHolder(new DefaultServlet());
-        context.addServlet(defaultServlet, CONTEXT_ROOT);
 
         server.start();
         server.join();

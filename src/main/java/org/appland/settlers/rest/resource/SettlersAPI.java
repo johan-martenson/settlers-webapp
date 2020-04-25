@@ -90,11 +90,12 @@ public class SettlersAPI {
             SWORD,
             SHIELD
     );
+    public static final String ID_MANAGER = "idManager";
 
     @Context
     ServletContext context;
 
-    private final IdManager idManager;
+    private final IdManager idManager = IdManager.idManager;
     private final Utils utils;
     private final List<GameResource> startedGames;
     private final JSONParser parser;
@@ -103,7 +104,6 @@ public class SettlersAPI {
     public SettlersAPI() {
         startedGames = new ArrayList<>();
 
-        idManager = new IdManager();
         utils = new Utils(idManager);
 
         parser = new JSONParser();
