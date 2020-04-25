@@ -1,0 +1,109 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007f695fb7b4a1, pid=722, tid=728
+#
+# JRE version: OpenJDK Runtime Environment (11.0.6+10) (build 11.0.6+10-post-Ubuntu-1ubuntu118.04.1)
+# Java VM: OpenJDK 64-Bit Server VM (11.0.6+10-post-Ubuntu-1ubuntu118.04.1, mixed mode, sharing, tiered, compressed oops, g1 gc, linux-amd64)
+# Problematic frame:
+# V  [libjvm.so+0xe1b4a1]
+#
+# Core dump will be written. Default location: core.722 (may not exist)
+#
+# If you would like to submit a bug report, please visit:
+#   https://bugs.launchpad.net/ubuntu/+source/openjdk-lts
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: /home/johan/projects/settlers-webapp-fatjar/target/surefire/surefirebooter5861394491850660568.jar /home/johan/projects/settlers-webapp-fatjar/target/surefire/surefire13377041915234031032tmp /home/johan/projects/settlers-webapp-fatjar/target/surefire/surefire_08933668218005553168tmp
+
+Host: Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz, 8 cores, 15G, Ubuntu 18.04.4 LTS
+Time: Wed Mar 25 13:07:58 2020 STD elapsed time: 14 seconds (0d 0h 0m 14s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x00007f695802d800):  GCTaskThread "GC Thread#0" [stack: 0x00007f695cf42000,0x00007f695d042000] [id=728]
+
+Stack: [0x00007f695cf42000,0x00007f695d042000],  sp=0x00007f695d040e10,  free space=1019k
+Native frames: (J=compiled Java code, A=aot compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [libjvm.so+0xe1b4a1]
+V  [libjvm.so+0xd7f20a]
+V  [libjvm.so+0xbcf1fe]
+
+
+siginfo: si_signo: 11 (SIGSEGV), si_code: 1 (SEGV_MAPERR), si_addr: 0x0000000000000010
+
+Register to memory mapping:
+
+RAX=0x0 is NULL
+RBX=0x00007f6930240420 points into unknown readable memory: 00 00 d0 07 00 00 00 00
+RCX=0x0 is NULL
+RDX=0x0 is NULL
+RSP=0x00007f695d040e10 points into unknown readable memory: 70 0e 04 5d 69 7f 00 00
+RBP=0x00007f695d040e40 points into unknown readable memory: c0 0e 04 5d 69 7f 00 00
+RSI=0x0 is NULL
+RDI=0x00007f695d040d70 points into unknown readable memory: 90 06 1a 60 69 7f 00 00
+R8 =0x0 is NULL
+R9 =0x00000000ffffffff is an unknown value
+R10=0x0 is NULL
+R11=0x0 is NULL
+R12=0x00007f695d040e1c points into unknown readable memory: ff ff ff ff
+R13=0x00007f695802d800 points into unknown readable memory: 20 41 0f 60 69 7f 00 00
+R14=0x0000000000000001 is an unknown value
+R15=0x00007f696101f7d0 is pointing into the stack for thread: 0x00007f6958014800
+
+
+Registers:
+RAX=0x0000000000000000, RBX=0x00007f6930240420, RCX=0x0000000000000000, RDX=0x0000000000000000
+RSP=0x00007f695d040e10, RBP=0x00007f695d040e40, RSI=0x0000000000000000, RDI=0x00007f695d040d70
+R8 =0x0000000000000000, R9 =0x00000000ffffffff, R10=0x0000000000000000, R11=0x0000000000000000
+R12=0x00007f695d040e1c, R13=0x00007f695802d800, R14=0x0000000000000001, R15=0x00007f696101f7d0
+RIP=0x00007f695fb7b4a1, EFLAGS=0x0000000000010202, CSGSFS=0x00000053002b0033, ERR=0x0000000000000000
+  TRAPNO=0x0000000000000000
+
+Top of Stack: (sp=0x00007f695d040e10)
+0x00007f695d040e10:   00007f695d040e70 ffffffff5802d800
+0x00007f695d040e20:   00007f69601134b8 00007f695802d800
+0x00007f695d040e30:   00007f695cf42000 0000000000100000
+0x00007f695d040e40:   00007f695d040ec0 00007f695fadf20a 
+
+Instructions: (pc=0x00007f695fb7b4a1)
+0x00007f695fb7b3a1:   35 ff 46 0f 00 31 c0 4c 89 e7 83 c3 01 e8 bd f1
+0x00007f695fb7b3b1:   db ff 41 39 5e 08 77 d7 5b 4c 89 e7 41 5c 41 5d
+0x00007f695fb7b3c1:   41 5e 5d e9 77 f8 db ff 0f 1f 80 00 00 00 00 31
+0x00007f695fb7b3d1:   c0 4c 89 ee 4c 89 e7 e8 93 f1 db ff 83 c3 01 41
+0x00007f695fb7b3e1:   39 5e 08 77 aa 5b 4c 89 e7 41 5c 41 5d 41 5e 5d
+0x00007f695fb7b3f1:   e9 4a f8 db ff 66 2e 0f 1f 84 00 00 00 00 00 48
+0x00007f695fb7b401:   8b 87 20 03 00 00 55 48 89 e5 0f b6 40 28 5d c3
+0x00007f695fb7b411:   90 0f 1f 40 00 66 2e 0f 1f 84 00 00 00 00 00 48
+0x00007f695fb7b421:   8b 87 20 03 00 00 55 48 89 e5 0f b6 40 29 5d c3
+0x00007f695fb7b431:   90 0f 1f 40 00 66 2e 0f 1f 84 00 00 00 00 00 55
+0x00007f695fb7b441:   48 89 e5 53 48 89 fb 48 83 ec 08 e8 2f e7 f5 ff
+0x00007f695fb7b451:   48 83 c4 08 48 89 df be 09 00 00 00 5b 5d e9 0c
+0x00007f695fb7b461:   2a da ff 66 90 66 2e 0f 1f 84 00 00 00 00 00 55
+0x00007f695fb7b471:   48 89 e5 41 56 41 55 41 54 53 4c 8d 65 dc 49 89
+0x00007f695fb7b481:   fd 48 83 ec 10 66 2e 0f 1f 84 00 00 00 00 00 49
+0x00007f695fb7b491:   8b 85 20 03 00 00 48 8b 78 30 48 8b 07 ff 50 18
+0x00007f695fb7b4a1:   8b 70 10 48 89 c3 4c 89 e7 49 89 d6 e8 ee 50 97
+0x00007f695fb7b4b1:   ff 48 8b 03 44 89 f6 48 89 df ff 10 4c 89 e7 e8
+0x00007f695fb7b4c1:   1b 51 97 ff 49 8b 85 20 03 00 00 48 8b 78 30 48
+0x00007f695fb7b4d1:   8b 07 ff 50 20 eb b8 0f 1f 84 00 00 00 00 00 55
+0x00007f695fb7b4e1:   48 8d 15 48 a2 7f ff 48 89 e5 41 54 53 48 8b 07
+0x00007f695fb7b4f1:   49 89 fc 48 89 f3 48 8b 80 88 00 00 00 48 39 d0
+0x00007f695fb7b501:   75 45 48 8b 97 08 03 00 00 48 8d 05 57 d4 07 00
+0x00007f695fb7b511:   48 85 d2 48 0f 44 d0 48 8d 35 2c cb 09 00 48 89
+0x00007f695fb7b521:   df 31 c0 e8 47 f0 db ff 4c 89 e7 48 89 de 31 d2
+0x00007f695fb7b531:   e8 1a df f5 ff 48 89 df 5b 41 5c 5d e9 fe f6 db
+0x00007f695fb7b541:   ff 66 0f 1f 44 00 00 ff d0 48 89 c2 eb c9 90 55
+0x00007f695fb7b551:   48 8d 15 e8 fe ff ff 48 89 e5 53 48 89 fb 48 83
+0x00007f695fb7b561:   ec 08 48 8b 07 48 8b 80 b8 00 00 00 48 39 d0 75
+0x00007f695fb7b571:   2e e8 09 e6 f5 ff be 09 00 00 00 48 89 df e8 ec
+0x00007f695fb7b581:   28 da ff 48 8b 03 48 89 df 48 8b 80 c0 00 00 00
+0x00007f695fb7b591:   48 83 c4 08 5b 5d ff e0 0f 1f 80 00 00 00 00 ff 
+
+
+Stack slot to memory mapping:
+stack at sp + 0 slots: 0x00007f695d040e70 points into unknown readable memory: c0 0e 04 5d 69 7f 00 00
+stack at sp + 1 slots: 0xffffffff5802d800 is an unknown value
+stack at sp + 2 slots: 0x00007f69601134b8: <offset 0x00000000013b34b8>
