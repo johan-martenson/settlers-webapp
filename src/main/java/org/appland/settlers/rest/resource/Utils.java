@@ -19,6 +19,7 @@ import org.appland.settlers.model.Fishery;
 import org.appland.settlers.model.Flag;
 import org.appland.settlers.model.ForesterHut;
 import org.appland.settlers.model.Fortress;
+import org.appland.settlers.model.GameChangesList;
 import org.appland.settlers.model.GameMap;
 import org.appland.settlers.model.GeologistFindMessage;
 import org.appland.settlers.model.GoldMine;
@@ -144,7 +145,7 @@ class Utils {
         return jsonPlayer;
     }
 
-    JSONArray pointsToJson(List<Point> points) {
+    JSONArray pointsToJson(Collection<Point> points) {
         JSONArray jsonPoints = new JSONArray();
 
         for (Point point : points) {
@@ -568,6 +569,7 @@ class Utils {
         jsonWorker.put("type", worker.getClass().getSimpleName());
         jsonWorker.put("inside", worker.isInsideBuilding());
         jsonWorker.put("betweenPoints", !worker.isExactlyAtPoint());
+        jsonWorker.put("id", idManager.getId(worker));
 
         if (!worker.isExactlyAtPoint()) {
             jsonWorker.put("previous", pointToJson(worker.getLastPoint()));
@@ -608,6 +610,7 @@ class Utils {
         }
 
         jsonRoad.put("points", jsonPoints);
+        jsonRoad.put("id", "" + idManager.getId(road));
 
         return jsonRoad;
     }
@@ -663,6 +666,8 @@ class Utils {
 
         jsonSign.put("x", point.x);
         jsonSign.put("y", point.y);
+
+        jsonSign.put("id", "" + idManager.getId(sign));
 
         return jsonSign;
     }
@@ -911,5 +916,258 @@ class Utils {
 
         jsonGeologistFindMessage.put("material", geologistFindMessage.getMaterial().toString());
         return jsonGeologistFindMessage;
+    }
+
+    public JSONObject gameMonitoringEventsToJson(GameChangesList gameChangesList) {
+        JSONObject jsonMonitoringEvents = new JSONObject();
+
+        jsonMonitoringEvents.put("time", gameChangesList.getTime());
+
+        if (!gameChangesList.getWorkersWithNewTargets().isEmpty()) {
+            jsonMonitoringEvents.put("workersWithNewTargets", workersWithNewTargetsToJson(gameChangesList.getWorkersWithNewTargets()));
+        }
+
+        if (!gameChangesList.getNewBuildings().isEmpty()) {
+            jsonMonitoringEvents.put("newBuildings", newBuildingsToJson(gameChangesList.getNewBuildings()));
+        }
+
+        if (!gameChangesList.getNewFlags().isEmpty()) {
+            jsonMonitoringEvents.put("newFlags", newFlagsToJson(gameChangesList.getNewFlags()));
+        }
+
+        if (!gameChangesList.getNewRoads().isEmpty()) {
+            jsonMonitoringEvents.put("newRoads", newRoadsToJson(gameChangesList.getNewRoads()));
+        }
+
+        if (!gameChangesList.getNewTrees().isEmpty()) {
+            jsonMonitoringEvents.put("newTrees", newTreesToJson(gameChangesList.getNewTrees()));
+        }
+
+        if (!gameChangesList.getNewBorder().isEmpty()) {
+            jsonMonitoringEvents.put("newBorder", newBorderToJson(gameChangesList.getNewBorder()));
+        }
+
+        if (!gameChangesList.getNewDiscoveredLand().isEmpty()) {
+            jsonMonitoringEvents.put("newDiscoveredLand", newDiscoveredLandToJson(gameChangesList.getNewDiscoveredLand()));
+        }
+
+        if (!gameChangesList.getNewCrops().isEmpty()) {
+            jsonMonitoringEvents.put("newCrops", newCropsToJson(gameChangesList.getNewCrops()));
+        }
+
+        if (!gameChangesList.getNewSigns().isEmpty()) {
+            jsonMonitoringEvents.put("newSigns", newSignsToJson(gameChangesList.getNewSigns()));
+        }
+
+        if (!gameChangesList.getChangedBuildings().isEmpty()) {
+            jsonMonitoringEvents.put("changedBuildings", changedBuildingsToJson(gameChangesList.getChangedBuildings()));
+        }
+
+        if (!gameChangesList.getRemovedWorkers().isEmpty()) {
+            jsonMonitoringEvents.put("removedWorkers", removedWorkersToJson(gameChangesList.getRemovedWorkers()));
+        }
+
+        if (!gameChangesList.getRemovedBuildings().isEmpty()) {
+            jsonMonitoringEvents.put("removedBuildings", removedBuildingsToJson(gameChangesList.getRemovedBuildings()));
+        }
+
+        if (!gameChangesList.getRemovedFlags().isEmpty()){
+            jsonMonitoringEvents.put("removedFlags", removedFlagsToJson(gameChangesList.getRemovedFlags()));
+        }
+
+        if (!gameChangesList.getRemovedRoads().isEmpty()) {
+            jsonMonitoringEvents.put("removedRoads", removedRoadsToJson(gameChangesList.getRemovedRoads()));
+        }
+
+        if (!gameChangesList.getRemovedTrees().isEmpty()) {
+            jsonMonitoringEvents.put("removedTrees", removedTreesToJson(gameChangesList.getRemovedTrees()));
+        }
+
+        if (!gameChangesList.getRemovedBorder().isEmpty()) {
+            jsonMonitoringEvents.put("removedBorder", removedBorderToJson(gameChangesList.getRemovedBorder()));
+        }
+
+        if (!gameChangesList.getRemovedCrops().isEmpty()) {
+            jsonMonitoringEvents.put("removedCrops", removedCropsToJson(gameChangesList.getRemovedCrops()));
+        }
+
+        if (!gameChangesList.getRemovedSigns().isEmpty()) {
+            jsonMonitoringEvents.put("removedSigns", removedSignsToJson(gameChangesList.getRemovedSigns()));
+        }
+
+        if (!gameChangesList.getRemovedStones().isEmpty()) {
+            jsonMonitoringEvents.put("removedStones", removedStonesToJson(gameChangesList.getRemovedStones()));
+        }
+        
+        return jsonMonitoringEvents;
+    }
+
+    private JSONArray removedStonesToJson(List<Stone> removedStones) {
+        JSONArray jsonRemovedStones = new JSONArray();
+
+        for (Stone stone : removedStones) {
+            jsonRemovedStones.add(pointToJson(stone.getPosition()));
+        }
+
+        return jsonRemovedStones;
+    }
+
+    private JSONArray removedSignsToJson(List<Sign> removedSigns) {
+        return objectsToJsonIdArray(removedSigns);
+    }
+
+    private JSONArray newSignsToJson(List<Sign> newSigns) {
+        JSONArray jsonSigns = new JSONArray();
+
+        for (Sign sign : newSigns) {
+            jsonSigns.add(signToJson(sign));
+        }
+
+        return jsonSigns;
+    }
+
+    private JSONArray removedCropsToJson(List<Crop> removedCrops) {
+        JSONArray jsonRemovedCrops = new JSONArray();
+
+        for (Crop crop : removedCrops) {
+            jsonRemovedCrops.add(pointToJson(crop.getPosition()));
+        }
+
+        return jsonRemovedCrops;
+    }
+
+    private JSONArray newCropsToJson(List<Crop> newCrops) {
+        return cropsToJson(newCrops);
+    }
+
+    private JSONArray cropsToJson(List<Crop> newCrops) {
+        JSONArray jsonCrops = new JSONArray();
+
+        for (Crop crop : newCrops) {
+            jsonCrops.add(cropToJson(crop));
+        }
+
+        return jsonCrops;
+    }
+
+    private JSONArray removedBorderToJson(List<Point> removedBorder) {
+        return pointsToJson(removedBorder);
+    }
+
+    private JSONArray newBorderToJson(List<Point> newBorder) {
+        return pointsToJson(newBorder);
+    }
+
+    private JSONArray newDiscoveredLandToJson(Collection<Point> newDiscoveredLand) {
+        return pointsToJson(newDiscoveredLand);
+    }
+
+    private JSONArray removedTreesToJson(List<Tree> removedTrees) {
+        JSONArray jsonRemovedTrees = new JSONArray();
+
+        for (Tree tree : removedTrees) {
+            jsonRemovedTrees.add(pointToJson(tree.getPosition()));
+        }
+
+        return jsonRemovedTrees;
+    }
+
+    private JSONArray newTreesToJson(List<Tree> newTrees) {
+        return treesToJson(newTrees);
+    }
+
+    private JSONArray treesToJson(List<Tree> newTrees) {
+        JSONArray jsonTrees = new JSONArray();
+
+        for (Tree tree : newTrees) {
+            jsonTrees.add(treeToJson(tree));
+        }
+
+        return jsonTrees;
+    }
+
+    private JSONArray changedBuildingsToJson(List<Building> changedBuildings) {
+        return housesToJson(changedBuildings);
+    }
+
+    private JSONArray removedRoadsToJson(List<Road> removedRoads) {
+        return objectsToJsonIdArray(removedRoads);
+    }
+
+    private JSONArray removedFlagsToJson(List<Flag> removedFlags) {
+        return objectsToJsonIdArray(removedFlags);
+    }
+
+    private JSONArray removedBuildingsToJson(List<Building> removedBuildings) {
+        return objectsToJsonIdArray(removedBuildings);
+    }
+
+    private JSONArray removedWorkersToJson(List<Worker> removedWorkers) {
+        return objectsToJsonIdArray(removedWorkers);
+    }
+
+    private JSONArray objectsToJsonIdArray(List<? extends Object> gameObjects) {
+        JSONArray jsonIdArray = new JSONArray();
+
+        for (Object gameObject : gameObjects) {
+            jsonIdArray.add(idManager.getId(gameObject));
+        }
+
+        return jsonIdArray;
+    }
+
+    private JSONArray newRoadsToJson(List<Road> newRoads) {
+        JSONArray jsonNewRoads = new JSONArray();
+
+        for (Road road : newRoads) {
+            jsonNewRoads.add(roadToJson(road));
+        }
+
+        return jsonNewRoads;
+    }
+
+    private JSONArray newFlagsToJson(List<Flag> newFlags) {
+        JSONArray jsonNewFlags = new JSONArray();
+
+        for (Flag flag : newFlags) {
+            jsonNewFlags.add(flagToJson(flag));
+        }
+
+        return jsonNewFlags;
+    }
+
+    private JSONArray newBuildingsToJson(List<Building> newBuildings) {
+        JSONArray jsonNewBuildings = new JSONArray();
+
+        for (Building building : newBuildings) {
+            jsonNewBuildings.add(houseToJson(building));
+        }
+
+        return jsonNewBuildings;
+    }
+
+    private JSONArray workersWithNewTargetsToJson(List<Worker> workersWithNewTargets) {
+        JSONArray jsonWorkersWithNewTarget = new JSONArray();
+
+        for (Worker worker : workersWithNewTargets) {
+            JSONObject jsonWorkerWithNewTarget = new JSONObject();
+
+            if (worker.getPlannedPath().isEmpty()) {
+                System.out.println("EMPTY PATH");
+                System.out.println(worker);
+            }
+
+            jsonWorkerWithNewTarget.put("id", idManager.getId(worker));
+            jsonWorkerWithNewTarget.put("path", pointsToJson(worker.getPlannedPath()));
+
+            jsonWorkerWithNewTarget.put("x", worker.getPosition().x);
+            jsonWorkerWithNewTarget.put("y", worker.getPosition().y);
+
+            jsonWorkerWithNewTarget.put("type", worker.getClass().getSimpleName());
+
+            jsonWorkersWithNewTarget.add(jsonWorkerWithNewTarget);
+        }
+
+        return jsonWorkersWithNewTarget;
     }
 }
