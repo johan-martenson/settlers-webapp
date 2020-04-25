@@ -30,7 +30,7 @@ class DeploymentListener implements ServletContextListener {
 
         servletContextEvent.getServletContext().setAttribute(SettlersAPI.GAME_TICKER, gameTicker);
 
-
+        /* Start the game ticker */
         gameTicker.activate();
 
         /* Load all maps and put them into the servlet context */
