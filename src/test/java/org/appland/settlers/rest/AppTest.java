@@ -7,7 +7,6 @@ import junit.framework.TestCase;
 import org.appland.settlers.model.Material;
 import org.appland.settlers.model.Point;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher;
@@ -36,7 +35,6 @@ import static org.appland.settlers.model.Material.STONE;
 import static org.appland.settlers.model.Material.SWORD;
 import static org.appland.settlers.model.Material.WOOD;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertNotEquals;
 
 /**
@@ -46,7 +44,7 @@ import static org.junit.Assert.assertNotEquals;
 public class AppTest extends TestCase {
 
     private static final String APPLICATION_PATH = "/*";
-    private static final String CONTEXT_ROOT = "/";
+    private static final String CONTEXT_ROOT = "/settlers";
 
     @BeforeClass
     public static void startFrontendServer() throws Exception {
@@ -70,8 +68,6 @@ public class AppTest extends TestCase {
         context.addServlet(restEasyServlet, APPLICATION_PATH);
 
         // Setup the DefaultServlet at "/".
-        final ServletHolder defaultServlet = new ServletHolder(new DefaultServlet());
-        context.addServlet(defaultServlet, CONTEXT_ROOT);
 
         server.setStopAtShutdown(true);
         server.start();
@@ -883,7 +879,7 @@ public class AppTest extends TestCase {
     @Test
     public void testCannotAccessValidPlayerInNonExistingGame() {
 
-        String NON_EXISTING_ID = "123";
+        String NON_EXISTING_ID = "123123123";
 
         /* Create game without players */
         Map<String,String> newGame0 = new HashMap<>();
@@ -1206,7 +1202,7 @@ public class AppTest extends TestCase {
         /* Verify that the house can be created and that it returns the house in the body */
         String houseId = given().contentType(ContentType.JSON).body(house).when()
                 .post("/games/{gameId}/players/{playerId}/houses", gameId, playerId).then()
-                .statusCode(200)
+                .statusCode(201)
                 .body("type", equalTo("Woodcutter"))
                 .body("x", equalTo(x))
                 .body("y", equalTo(y))
@@ -1364,7 +1360,7 @@ public class AppTest extends TestCase {
         /* Verify that the flag can be created and that it returns the flag in the body */
         String flagId = given().contentType(ContentType.JSON).body(flag).when()
                 .post("/games/{gameId}/players/{playerId}/flags", gameId, playerId).then()
-                .statusCode(200)
+                .statusCode(201)
                 .body("x", equalTo(x))
                 .body("y", equalTo(y))
                 .extract().jsonPath().getString("id");
@@ -1529,7 +1525,7 @@ public class AppTest extends TestCase {
         /* Create the flag */
         String playerId1 = given().contentType(ContentType.JSON).body(flag).when()
                 .post("/games/{gameId}/players/{playerId}/flags", gameId, playerId).then()
-                .statusCode(200)
+                .statusCode(201)
                 .extract().jsonPath().getString("playerId");
 
         assertNotNull(playerId1);
@@ -1877,7 +1873,7 @@ public class AppTest extends TestCase {
         /* Create the flag */
         flagId = given().contentType(ContentType.JSON).body(flag).when()
                 .post("/games/{gameId}/players/{playerId}/flags", gameId, playerId).then()
-                .statusCode(200)
+                .statusCode(201)
                 .extract().jsonPath().getString("id");
 
         assertNotNull(flagId);
