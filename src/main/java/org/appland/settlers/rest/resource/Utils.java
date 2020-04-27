@@ -5,6 +5,7 @@ import org.appland.settlers.maps.MapLoader;
 import org.appland.settlers.model.Armory;
 import org.appland.settlers.model.Bakery;
 import org.appland.settlers.model.Barracks;
+import org.appland.settlers.model.BorderChange;
 import org.appland.settlers.model.Brewery;
 import org.appland.settlers.model.Building;
 import org.appland.settlers.model.BuildingCapturedMessage;
@@ -943,10 +944,6 @@ class Utils {
             jsonMonitoringEvents.put("newTrees", newTreesToJson(gameChangesList.getNewTrees()));
         }
 
-        if (!gameChangesList.getNewBorder().isEmpty()) {
-            jsonMonitoringEvents.put("newBorder", newBorderToJson(gameChangesList.getNewBorder()));
-        }
-
         if (!gameChangesList.getNewDiscoveredLand().isEmpty()) {
             jsonMonitoringEvents.put("newDiscoveredLand", newDiscoveredLandToJson(gameChangesList.getNewDiscoveredLand()));
         }
@@ -983,8 +980,8 @@ class Utils {
             jsonMonitoringEvents.put("removedTrees", removedTreesToJson(gameChangesList.getRemovedTrees()));
         }
 
-        if (!gameChangesList.getRemovedBorder().isEmpty()) {
-            jsonMonitoringEvents.put("removedBorder", removedBorderToJson(gameChangesList.getRemovedBorder()));
+        if (!gameChangesList.getChangedBorders().isEmpty()) {
+            jsonMonitoringEvents.put("changedBorders", borderChangesToJson(gameChangesList.getChangedBorders()));
         }
 
         if (!gameChangesList.getRemovedCrops().isEmpty()) {
@@ -1000,6 +997,22 @@ class Utils {
         }
         
         return jsonMonitoringEvents;
+    }
+
+    private JSONArray borderChangesToJson(List<BorderChange> changedBorders) {
+        JSONArray jsonBorderChanges = new JSONArray();
+
+        for (BorderChange borderChange : changedBorders) {
+            JSONObject jsonBorderChange = new JSONObject();
+
+            jsonBorderChange.put("player", borderChange.getPlayer());
+            jsonBorderChange.put("newBorder", pointsToJson(borderChange.getNewBorder()));
+            jsonBorderChange.put("removedBorder", pointsToJson(borderChange.getRemovedBorder()));
+
+            jsonBorderChanges.add(jsonBorderChange);
+        }
+
+        return jsonBorderChanges;
     }
 
     private JSONArray removedStonesToJson(List<Stone> removedStones) {
@@ -1048,14 +1061,6 @@ class Utils {
         }
 
         return jsonCrops;
-    }
-
-    private JSONArray removedBorderToJson(List<Point> removedBorder) {
-        return pointsToJson(removedBorder);
-    }
-
-    private JSONArray newBorderToJson(List<Point> newBorder) {
-        return pointsToJson(newBorder);
     }
 
     private JSONArray newDiscoveredLandToJson(Collection<Point> newDiscoveredLand) {
