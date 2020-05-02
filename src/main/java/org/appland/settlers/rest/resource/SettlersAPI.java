@@ -1033,7 +1033,7 @@ public class SettlersAPI {
 
             if (!building.isMilitaryBuilding()) {
                 jsonResponse.put("message", "Cannot evacuate non-military building");
-            } else if (!(building.occupied() || building.ready())) {
+            } else if (!(building.isOccupied() || building.isReady())) {
                 jsonResponse.put("message", "Cannot evacuate a building in this state");
             } else {
 

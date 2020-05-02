@@ -390,13 +390,13 @@ class Utils {
 
         if (building.underConstruction()) {
             jsonHouse.put("state", "UNFINISHED");
-        } else if (building.ready() && !building.occupied()) {
+        } else if (building.isReady() && !building.isOccupied()) {
             jsonHouse.put("state", "UNOCCUPIED");
-        } else if (building.ready() && building.occupied()) {
+        } else if (building.isReady() && building.isOccupied()) {
             jsonHouse.put("state", "OCCUPIED");
-        } else if (building.burningDown()) {
+        } else if (building.isBurningDown()) {
             jsonHouse.put("state", "BURNING");
-        } else if (building.destroyed()) {
+        } else if (building.isDestroyed()) {
             jsonHouse.put("state", "DESTROYED");
         }
 
@@ -405,7 +405,7 @@ class Utils {
         }
 
         /* Add amount of hosted soldiers for military buildings */
-        if (building.isMilitaryBuilding() && building.ready()) {
+        if (building.isMilitaryBuilding() && building.isReady()) {
             JSONArray jsonSoldiers = new JSONArray();
 
             for (Military military : building.getHostedMilitary()) {
