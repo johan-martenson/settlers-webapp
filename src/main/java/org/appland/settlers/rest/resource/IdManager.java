@@ -15,7 +15,7 @@ public class IdManager {
         ids = 0;
     }
 
-    int getId(Object o) {
+    String getId(Object o) {
         synchronized (objectToId) {
             if (!objectToId.containsKey(o)) {
                 ids++;
@@ -25,7 +25,7 @@ public class IdManager {
             }
         }
 
-        return objectToId.get(o);
+        return Integer.toString(objectToId.get(o));
     }
 
     Object getObject(String id) {

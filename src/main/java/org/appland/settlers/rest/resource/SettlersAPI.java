@@ -30,6 +30,7 @@ import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.UnderAttackMessage;
 import org.appland.settlers.model.WildAnimal;
 import org.appland.settlers.model.Worker;
+import org.appland.settlers.rest.Command;
 import org.appland.settlers.rest.GameTicker;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -720,7 +721,7 @@ public class SettlersAPI {
             return Response.status(404).entity(message.toJSONString()).build();
         }
 
-        if (!map.getFlags().contains(player)) {
+        if (!map.getFlags().contains(flag)) {
             JSONObject message = new JSONObject();
 
             message.put("status", "Error");
@@ -1525,6 +1526,7 @@ public class SettlersAPI {
                 ((JSONArray)jsonAvailableConstruction.get(key)).add("mine");
             }
 
+            // TODO: verify that it's wrong to do this twice!
             for (Point point : player.getAvailableMiningPoints()) {
 
                 /* Filter points not discovered yet */

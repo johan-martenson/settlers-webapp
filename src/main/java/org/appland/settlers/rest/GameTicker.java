@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class GameTicker {
@@ -17,7 +18,7 @@ public class GameTicker {
 
     private final ScheduledExecutorService scheduler;
     private final Set<GameResource> games;
-
+    ScheduledFuture<?> handle;
     private int counter;
 
     GameTicker() {
@@ -33,7 +34,7 @@ public class GameTicker {
     }
 
     void activate() {
-        scheduler.scheduleAtFixedRate(() -> {
+        handle = scheduler.scheduleAtFixedRate(() -> {
             boolean runComputers = false;
 
             if (counter == COMPUTER_PLAYER_FREQUENCY) {
@@ -49,21 +50,19 @@ public class GameTicker {
                 try {
                     synchronized (map) {
                         map.stepTime();
+
+
+                        if (runComputers) {
+                            for (ComputerPlayer computerPlayer : computerPlayers) {
+                                synchronized (map) {
+                                    computerPlayer.turn();
+                                }
+                            }
+                        }
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     System.out.println(e);
                     e.printStackTrace();
-                }
-
-                if (runComputers) {
-                    try {
-                        for (ComputerPlayer computerPlayer : computerPlayers) {
-                            computerPlayer.turn();
-                        }
-                    } catch (Exception e) {
-                        System.out.println(e);
-                        e.printStackTrace();
-                    }
                 }
             }
 

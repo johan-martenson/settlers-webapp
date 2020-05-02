@@ -66,8 +66,16 @@ public class WebsocketMonitor implements PlayerGameViewMonitor {
 
     @Override
     public void onViewChangesForPlayer(Player player, GameChangesList gameChangesList) {
-        JSONObject jsonGameMonitoringEvent = utils.gameMonitoringEventsToJson(gameChangesList);
+        try {
+            System.out.println("\nView changed");
 
-        sessions.get(player).getAsyncRemote().sendText(jsonGameMonitoringEvent.toJSONString());
+            JSONObject jsonGameMonitoringEvent = utils.gameMonitoringEventsToJson(gameChangesList, player);
+
+            System.out.println(gameChangesList);
+
+            sessions.get(player).getAsyncRemote().sendText(jsonGameMonitoringEvent.toJSONString());
+        } catch (Exception e) {
+            System.out.println(e);
+        }
     }
 }

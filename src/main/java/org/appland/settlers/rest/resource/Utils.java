@@ -96,7 +96,7 @@ class Utils {
     JSONObject gameToJson(GameMap map) {
         JSONObject jsonGame = new JSONObject();
 
-        int id = idManager.getId(map);
+        String id = idManager.getId(map);
 
         jsonGame.put("id", id);
         jsonGame.put("players", playersToJson(map.getPlayers()));
@@ -119,12 +119,12 @@ class Utils {
         return jsonPlayers;
     }
 
-    private JSONObject playerToJson(Player player, int i) {
+    private JSONObject playerToJson(Player player, String playerId) {
         JSONObject jsonPlayer = new JSONObject();
 
         jsonPlayer.put("name", player.getName());
         jsonPlayer.put("color", colorToHexString(player.getColor()));
-        jsonPlayer.put("id", "" + i);
+        jsonPlayer.put("id", "" + playerId);
 
         /* Get the player's "center spot" */
         for (Building building : player.getBuildings()) {
@@ -458,9 +458,15 @@ class Utils {
         return new Point(x, y);
     }
 
-    Building buildingFactory(JSONObject jsonHouse, Player player) {
+    public Building buildingFactory(JSONObject jsonHouse, Player player) {
+        String buildingType = (String)jsonHouse.get("type");
+
+        return buildingFactory(buildingType, player);
+    }
+
+    public Building buildingFactory(String buildingType, Player player) {
         Building building = null;
-        switch((String)jsonHouse.get("type")) {
+        switch(buildingType) {
             case "ForesterHut":
                 building = new ForesterHut(player);
                 break;
@@ -543,9 +549,10 @@ class Utils {
                 building = new Brewery(player);
                 break;
             default:
-                System.out.println("DON'T KNOW HOW TO CREATE BUILDING " + jsonHouse.get("type"));
+                System.out.println("DON'T KNOW HOW TO CREATE BUILDING " + buildingType);
                 System.exit(1);
         }
+
         return building;
     }
 
@@ -620,16 +627,13 @@ class Utils {
 
         /* Fill in borders */
         JSONObject jsonBorder = new JSONObject();
-        jsonBorder.put("color", colorToHexString(player.getColor()));
         jsonBorder.put("playerId", playerId);
 
         JSONArray jsonBorderPoints = new JSONArray();
         jsonBorder.put("points", jsonBorderPoints);
 
-        for (Collection<Point> border : player.getBorders()) {
-            for (Point point : border) {
-                jsonBorderPoints.add(pointToJson(point));
-            }
+        for (Point point : player.getBorderPoints()) {
+            jsonBorderPoints.add(pointToJson(point));
         }
 
         return jsonBorder;
@@ -919,7 +923,7 @@ class Utils {
         return jsonGeologistFindMessage;
     }
 
-    public JSONObject gameMonitoringEventsToJson(GameChangesList gameChangesList) {
+    public JSONObject gameMonitoringEventsToJson(GameChangesList gameChangesList, Player player) {
         JSONObject jsonMonitoringEvents = new JSONObject();
 
         jsonMonitoringEvents.put("time", gameChangesList.getTime());
@@ -984,6 +988,13 @@ class Utils {
             jsonMonitoringEvents.put("changedBorders", borderChangesToJson(gameChangesList.getChangedBorders()));
         }
 
+        if (!gameChangesList.getChangedAvailableConstruction().isEmpty()) {
+            jsonMonitoringEvents.put(
+                    "changedAvailableConstruction",
+                    availableConstructionChangesToJson(gameChangesList.getChangedAvailableConstruction(), player)
+            );
+        }
+
         if (!gameChangesList.getRemovedCrops().isEmpty()) {
             jsonMonitoringEvents.put("removedCrops", removedCropsToJson(gameChangesList.getRemovedCrops()));
         }
@@ -999,13 +1010,48 @@ class Utils {
         return jsonMonitoringEvents;
     }
 
+    private JSONArray availableConstructionChangesToJson(Collection<Point> changedAvailableConstruction, Player player) {
+        GameMap map = player.getMap();
+
+        JSONArray jsonChangedAvailableConstruction = new JSONArray();
+
+        synchronized (map) {
+            for (Point point : changedAvailableConstruction) {
+                JSONObject jsonPointAndAvailableConstruction = new JSONObject();
+                JSONArray jsonAvailableConstruction = new JSONArray();
+
+                if (map.isAvailableFlagPoint(player, point)) {
+                    jsonAvailableConstruction.add("flag");
+                }
+
+                Size size = map.isAvailableHousePoint(player, point);
+
+                if (size != null) {
+                    jsonAvailableConstruction.add(size.name().toLowerCase());
+                }
+
+                if (map.isAvailableMinePoint(player, point)) {
+                    jsonAvailableConstruction.add("mine");
+                }
+
+                jsonPointAndAvailableConstruction.put("available", jsonAvailableConstruction);
+                jsonPointAndAvailableConstruction.put("x", point.x);
+                jsonPointAndAvailableConstruction.put("y", point.y);
+
+                jsonChangedAvailableConstruction.add(jsonPointAndAvailableConstruction);
+            }
+        }
+
+        return jsonChangedAvailableConstruction;
+    }
+
     private JSONArray borderChangesToJson(List<BorderChange> changedBorders) {
         JSONArray jsonBorderChanges = new JSONArray();
 
         for (BorderChange borderChange : changedBorders) {
             JSONObject jsonBorderChange = new JSONObject();
 
-            jsonBorderChange.put("player", borderChange.getPlayer());
+            jsonBorderChange.put("playerId", idManager.getId(borderChange.getPlayer()));
             jsonBorderChange.put("newBorder", pointsToJson(borderChange.getNewBorder()));
             jsonBorderChange.put("removedBorder", pointsToJson(borderChange.getRemovedBorder()));
 
@@ -1115,7 +1161,7 @@ class Utils {
         JSONArray jsonIdArray = new JSONArray();
 
         for (Object gameObject : gameObjects) {
-            jsonIdArray.add(idManager.getId(gameObject));
+            jsonIdArray.add("" + idManager.getId(gameObject));
         }
 
         return jsonIdArray;
@@ -1162,7 +1208,7 @@ class Utils {
                 System.out.println(worker);
             }
 
-            jsonWorkerWithNewTarget.put("id", idManager.getId(worker));
+            jsonWorkerWithNewTarget.put("id", "" + idManager.getId(worker));
             jsonWorkerWithNewTarget.put("path", pointsToJson(worker.getPlannedPath()));
 
             jsonWorkerWithNewTarget.put("x", worker.getPosition().x);

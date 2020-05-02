@@ -35,6 +35,7 @@ import static org.appland.settlers.model.Material.STONE;
 import static org.appland.settlers.model.Material.SWORD;
 import static org.appland.settlers.model.Material.WOOD;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.hasItem;
 import static org.junit.Assert.assertNotEquals;
 
 /**
