@@ -31,7 +31,9 @@ import org.appland.settlers.model.HunterHut;
 import org.appland.settlers.model.IronMine;
 import org.appland.settlers.model.IronSmelter;
 import org.appland.settlers.model.Material;
+import org.appland.settlers.model.Message;
 import org.appland.settlers.model.Military;
+import org.appland.settlers.model.MilitaryBuildingCausedLostLandMessage;
 import org.appland.settlers.model.MilitaryBuildingOccupiedMessage;
 import org.appland.settlers.model.MilitaryBuildingReadyMessage;
 import org.appland.settlers.model.Mill;
@@ -51,6 +53,8 @@ import org.appland.settlers.model.StoreHouseIsReadyMessage;
 import org.appland.settlers.model.Terrain;
 import org.appland.settlers.model.Tile;
 import org.appland.settlers.model.Tree;
+import org.appland.settlers.model.TreeConservationProgramActivatedMessage;
+import org.appland.settlers.model.TreeConservationProgramDeactivatedMessage;
 import org.appland.settlers.model.UnderAttackMessage;
 import org.appland.settlers.model.WatchTower;
 import org.appland.settlers.model.Well;
@@ -67,10 +71,16 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static org.appland.settlers.model.Message.MessageType.BUILDING_CAPTURED;
+import static org.appland.settlers.model.Message.MessageType.BUILDING_LOST;
 import static org.appland.settlers.model.Message.MessageType.GEOLOGIST_FIND;
+import static org.appland.settlers.model.Message.MessageType.MILITARY_BUILDING_CAUSED_LOST_LAND;
 import static org.appland.settlers.model.Message.MessageType.MILITARY_BUILDING_OCCUPIED;
 import static org.appland.settlers.model.Message.MessageType.MILITARY_BUILDING_READY;
 import static org.appland.settlers.model.Message.MessageType.NO_MORE_RESOURCES;
+import static org.appland.settlers.model.Message.MessageType.STORE_HOUSE_IS_READY;
+import static org.appland.settlers.model.Message.MessageType.TREE_CONSERVATION_PROGRAM_ACTIVATED;
+import static org.appland.settlers.model.Message.MessageType.TREE_CONSERVATION_PROGRAM_DEACTIVATED;
 import static org.appland.settlers.model.Message.MessageType.UNDER_ATTACK;
 
 class Utils {
@@ -875,6 +885,7 @@ class Utils {
 
         jsonMilitaryBuildingOccupiedMessage.put("type", MILITARY_BUILDING_READY.toString());
         jsonMilitaryBuildingOccupiedMessage.put("houseId", "" + idManager.getId(militaryBuildingReadyMessage.getBuilding()));
+
         return jsonMilitaryBuildingOccupiedMessage;
     }
 
@@ -883,20 +894,17 @@ class Utils {
 
         jsonNoMoreResourcesMessage.put("type", NO_MORE_RESOURCES.toString());
         jsonNoMoreResourcesMessage.put("houseId", "" + idManager.getId(noMoreResourcesMessage.getBuilding()));
+
         return jsonNoMoreResourcesMessage;
     }
 
     JSONObject militaryBuildingOccupiedMessageToJson(MilitaryBuildingOccupiedMessage militaryBuildingOccupiedMessage) {
-        JSONObject jsonBorderExpandedMessage = new JSONObject();
+        JSONObject jsonMilitaryBuildingOccupiedMessage = new JSONObject();
 
-        JSONObject jsonBorderExpandedPoint = new JSONObject();
+        jsonMilitaryBuildingOccupiedMessage.put("type", MILITARY_BUILDING_OCCUPIED.toString());
+        jsonMilitaryBuildingOccupiedMessage.put("houseId", idManager.getId(militaryBuildingOccupiedMessage.getBuilding()));
 
-        jsonBorderExpandedPoint.put("x", militaryBuildingOccupiedMessage.getBuilding().getPosition().x);
-        jsonBorderExpandedPoint.put("y", militaryBuildingOccupiedMessage.getBuilding().getPosition().y);
-
-        jsonBorderExpandedMessage.put("type", MILITARY_BUILDING_OCCUPIED.toString());
-        jsonBorderExpandedMessage.put("point", jsonBorderExpandedPoint);
-        return jsonBorderExpandedMessage;
+        return jsonMilitaryBuildingOccupiedMessage;
     }
 
     JSONObject underAttackMessageToJson(UnderAttackMessage underAttackMessage) {
@@ -905,6 +913,7 @@ class Utils {
 
         jsonUnderAttackMessage.put("type", UNDER_ATTACK.toString());
         jsonUnderAttackMessage.put("houseId", "" + idManager.getId(underAttackMessage.getBuilding()));
+
         return jsonUnderAttackMessage;
     }
 
@@ -920,6 +929,7 @@ class Utils {
         jsonGeologistFindMessage.put("point", jsonGeologistFindPoint);
 
         jsonGeologistFindMessage.put("material", geologistFindMessage.getMaterial().toString());
+
         return jsonGeologistFindMessage;
     }
 
@@ -1006,9 +1016,72 @@ class Utils {
         if (!gameChangesList.getRemovedStones().isEmpty()) {
             jsonMonitoringEvents.put("removedStones", removedStonesToJson(gameChangesList.getRemovedStones()));
         }
-        
+
+        if (!gameChangesList.getNewGameMessages().isEmpty()) {
+            jsonMonitoringEvents.put("newMessages", messagesToJson(gameChangesList.getNewGameMessages()));
+        }
+
         return jsonMonitoringEvents;
     }
+
+    private JSONArray messagesToJson(List<Message> newGameMessages) {
+        JSONArray jsonMessages = new JSONArray();
+
+        for (Message message : newGameMessages) {
+            if (message.getMessageType() == MILITARY_BUILDING_OCCUPIED) {
+                jsonMessages.add(militaryBuildingOccupiedMessageToJson((MilitaryBuildingOccupiedMessage) message));
+            } else if (message.getMessageType() == GEOLOGIST_FIND) {
+                jsonMessages.add(geologistFindMessageToJson((GeologistFindMessage) message));
+            } else if (message.getMessageType() == MILITARY_BUILDING_READY) {
+                jsonMessages.add(militaryBuildingReadyMessageToJson((MilitaryBuildingReadyMessage) message));
+            } else if (message.getMessageType() == NO_MORE_RESOURCES) {
+                jsonMessages.add(noMoreResourcesMessageToJson((NoMoreResourcesMessage) message));
+            } else if (message.getMessageType() == UNDER_ATTACK) {
+                jsonMessages.add(underAttackMessageToJson((UnderAttackMessage) message));
+            } else if (message.getMessageType() == BUILDING_CAPTURED) {
+                jsonMessages.add(buildingCapturedMessageToJson((BuildingCapturedMessage) message));
+            } else if (message.getMessageType() == BUILDING_LOST) {
+                jsonMessages.add(buildingLostMessageToJson((BuildingLostMessage) message));
+            } else if (message.getMessageType() == STORE_HOUSE_IS_READY) {
+                jsonMessages.add(jsonStoreHouseIsReadyMessageToJson((StoreHouseIsReadyMessage) message));
+            } else if (message.getMessageType() == TREE_CONSERVATION_PROGRAM_ACTIVATED) {
+                jsonMessages.add(treeConservationProgramActivatedMessageToJson((TreeConservationProgramActivatedMessage) message));
+            } else if (message.getMessageType() == TREE_CONSERVATION_PROGRAM_DEACTIVATED) {
+                jsonMessages.add(treeConservationProgramDeactivatedMessageToJson((TreeConservationProgramDeactivatedMessage) message));
+            } else if (message.getMessageType() == MILITARY_BUILDING_CAUSED_LOST_LAND) {
+                jsonMessages.add(militaryBuildingCausedLostLandMessageToJson((MilitaryBuildingCausedLostLandMessage) message));
+            }
+        }
+
+        return jsonMessages;
+    }
+
+    private JSONObject militaryBuildingCausedLostLandMessageToJson(MilitaryBuildingCausedLostLandMessage message) {
+        JSONObject jsonMilitaryBuildingCausedLostLandMessage = new JSONObject();
+
+        jsonMilitaryBuildingCausedLostLandMessage.put("type", MILITARY_BUILDING_CAUSED_LOST_LAND.toString());
+        jsonMilitaryBuildingCausedLostLandMessage.put("houseId", idManager.getId(message.getBuilding()));
+
+        return jsonMilitaryBuildingCausedLostLandMessage;
+    }
+
+    private JSONObject treeConservationProgramDeactivatedMessageToJson(TreeConservationProgramDeactivatedMessage message) {
+        JSONObject jsonTreeConservationProgramDeactivated = new JSONObject();
+
+        jsonTreeConservationProgramDeactivated.put("type", TREE_CONSERVATION_PROGRAM_DEACTIVATED.toString());
+
+        return jsonTreeConservationProgramDeactivated;
+    }
+
+    private JSONObject treeConservationProgramActivatedMessageToJson(TreeConservationProgramActivatedMessage message) {
+        JSONObject jsonTreeConservationProgramActivated = new JSONObject();
+
+        jsonTreeConservationProgramActivated.put("type", TREE_CONSERVATION_PROGRAM_ACTIVATED.toString());
+
+        return jsonTreeConservationProgramActivated;
+    }
+
+
 
     private JSONArray availableConstructionChangesToJson(Collection<Point> changedAvailableConstruction, Player player) {
         GameMap map = player.getMap();
