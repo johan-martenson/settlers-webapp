@@ -189,6 +189,7 @@ class Utils {
         return hex.toString();
     }
 
+    // TODO: remove this if possible
     public GameMap jsonToGame(JSONObject jsonGame) throws Exception {
         int width = Integer.parseInt((String) jsonGame.get("width"));
         int height = Integer.parseInt((String) jsonGame.get("height"));
@@ -297,7 +298,7 @@ class Utils {
         return ""; // Should never be reached but the compiler complains
     }
 
-    JSONObject pointToDetailedJson(Point point, Player player, GameMap map) throws Exception {
+    JSONObject pointToDetailedJson(Point point, Player player, GameMap map) {
 
         JSONObject jsonPointInfo = pointToJson(point);
 
@@ -760,7 +761,7 @@ class Utils {
         return jsonMapFile;
     }
 
-    Collection gamePlaceholdersToJson(List<GameResource> gamePlaceholders) {
+    JSONArray gamePlaceholdersToJson(List<GameResource> gamePlaceholders) {
         JSONArray jsonGamePlaceholders = new JSONArray();
 
         for (GameResource gamePlaceholder : gamePlaceholders) {
@@ -1230,7 +1231,7 @@ class Utils {
         return objectsToJsonIdArray(removedWorkers);
     }
 
-    private JSONArray objectsToJsonIdArray(List<? extends Object> gameObjects) {
+    private JSONArray objectsToJsonIdArray(List<?> gameObjects) {
         JSONArray jsonIdArray = new JSONArray();
 
         for (Object gameObject : gameObjects) {

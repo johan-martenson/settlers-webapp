@@ -3,9 +3,7 @@ org/appland/settlers/rest/resource/IdManager.class
 org/appland/settlers/rest/resource/ResourceLevel.class
 org/appland/settlers/rest/BuildingType.class
 org/appland/settlers/rest/FatJarApplication.class
-org/appland/settlers/rest/Command.class
 org/appland/settlers/rest/DeploymentListener.class
-org/appland/settlers/rest/Command$Type.class
 org/appland/settlers/rest/Main.class
 org/appland/settlers/rest/resource/Utils.class
 org/appland/settlers/rest/resource/MessageResource.class

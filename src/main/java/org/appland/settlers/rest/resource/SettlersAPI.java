@@ -30,7 +30,6 @@ import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.UnderAttackMessage;
 import org.appland.settlers.model.WildAnimal;
 import org.appland.settlers.model.Worker;
-import org.appland.settlers.rest.Command;
 import org.appland.settlers.rest.GameTicker;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -284,15 +283,11 @@ public class SettlersAPI {
 
             MapFile updatedMapFile = (MapFile) idManager.getObject(updatedMapFileId);
 
-            if (gameObject instanceof GameResource) {
-                GameResource gamePlaceholder = (GameResource) gameObject;
+            GameResource gamePlaceholder = (GameResource) gameObject;
 
-                gamePlaceholder.setMap(updatedMapFile);
+            gamePlaceholder.setMap(updatedMapFile);
 
-                return Response.status(200).entity(utils.gamePlaceholderToJson(gamePlaceholder).toJSONString()).build();
-            } else {
-                return Response.status(405).build(); // Add message - cannot modify map of a running game
-            }
+            return Response.status(200).entity(utils.gamePlaceholderToJson(gamePlaceholder).toJSONString()).build();
         }
 
         if (jsonUpdates.containsKey("status") && gameObject instanceof GameResource) {
@@ -369,7 +364,7 @@ public class SettlersAPI {
         if (gameObject instanceof GameResource) {
             gameResources.remove(gameObject);
         } else {
-            startedGames.remove(gameObject);
+            startedGames.remove(gameObject); // TODO: type is wrong - startedGames is GameResources, gameObject is GameMap
         }
 
         /* Free up the id */
@@ -595,15 +590,6 @@ public class SettlersAPI {
 
         JSONObject terrain = utils.terrainToJson(map);
 
-        if (map == null) {
-            JSONObject message = new JSONObject();
-
-            message.put("status", "Error");
-            message.put("message", format("No game with id %s exists", gameId));
-
-            return Response.status(404).entity(message.toJSONString()).build();
-        }
-
         return Response.status(200).entity(terrain.toJSONString()).build();
     }
 
@@ -736,7 +722,8 @@ public class SettlersAPI {
             JSONObject message = new JSONObject();
 
             message.put("status", "Error");
-            message.put("message", format("Cannot remove flag from other player"));
+            message.put("message", "Cannot remove flag from other player");
+
             return Response.status(404).entity(message.toJSONString()).build();
         }
 

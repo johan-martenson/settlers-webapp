@@ -24,7 +24,7 @@ public class WebsocketMonitor implements PlayerGameViewMonitor {
     private final Map<Player, Session> sessions;
     private final Utils utils;
 
-    private IdManager idManager = IdManager.idManager;
+    private final IdManager idManager = IdManager.idManager;
 
     public WebsocketMonitor() {
         sessions = new HashMap<>();
@@ -34,18 +34,18 @@ public class WebsocketMonitor implements PlayerGameViewMonitor {
     }
 
     @OnMessage
-    public void onMessage(Session session, String message) throws IOException {
+    public void onMessage(Session session, String message) {
         System.out.println("ON MESSAGE: " + message);
     }
 
     @OnClose
-    public void onClose(Session session) throws IOException {
+    public void onClose(Session session) {
         System.out.println("ON CLOSE");
     }
 
     @OnError
     public void onError(Session session, Throwable throwable) {
-        System.out.println("ON ERROR");
+        System.out.println("ON ERROR: " + throwable);
     }
 
     @OnOpen

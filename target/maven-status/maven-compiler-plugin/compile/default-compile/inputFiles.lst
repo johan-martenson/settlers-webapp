@@ -1,6 +1,5 @@
 /home/johan/projects/settlers-webapp-fatjar/src/main/java/org/appland/settlers/rest/resource/GameResource.java
 /home/johan/projects/settlers-webapp-fatjar/src/main/java/org/appland/settlers/rest/GameTicker.java
-/home/johan/projects/settlers-webapp-fatjar/src/main/java/org/appland/settlers/rest/Command.java
 /home/johan/projects/settlers-webapp-fatjar/src/main/java/org/appland/settlers/rest/Main.java
 /home/johan/projects/settlers-webapp-fatjar/src/main/java/org/appland/settlers/rest/resource/IdManager.java
 /home/johan/projects/settlers-webapp-fatjar/src/main/java/org/appland/settlers/rest/resource/SettlersAPI.java
