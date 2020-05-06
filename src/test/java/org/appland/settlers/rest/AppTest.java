@@ -1615,7 +1615,7 @@ public class AppTest extends TestCase {
             for (Object playerObject : playerObjects) {
                 Map playerMap = (Map)playerObject;
 
-                if (playerId.equals(((Integer)playerMap.get("id")).toString())) {
+                if (playerId.equals(playerMap.get("id"))) {
                     found = true;
 
                     break;
