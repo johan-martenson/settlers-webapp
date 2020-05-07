@@ -134,7 +134,7 @@ class Utils {
 
         jsonPlayer.put("name", player.getName());
         jsonPlayer.put("color", colorToHexString(player.getColor()));
-        jsonPlayer.put("id", "" + playerId);
+        jsonPlayer.put("id", playerId);
 
         /* Get the player's "center spot" */
         for (Building building : player.getBuildings()) {
@@ -362,8 +362,8 @@ class Utils {
         JSONObject jsonHouse = pointToJson(building.getPosition());
 
         jsonHouse.put("type", building.getClass().getSimpleName());
-        jsonHouse.put("playerId", "" + idManager.getId(building.getPlayer()));
-        jsonHouse.put("id", "" + idManager.getId(building));
+        jsonHouse.put("playerId", idManager.getId(building.getPlayer()));
+        jsonHouse.put("id", idManager.getId(building));
 
         if (building.canProduce()) {
             JSONArray jsonProduces = new JSONArray();
@@ -611,8 +611,8 @@ class Utils {
     JSONObject flagToJson(Flag flag) {
         JSONObject jsonFlag = pointToJson(flag.getPosition());
 
-        jsonFlag.put("id", "" + idManager.getId(flag));
-        jsonFlag.put("playerId", "" + idManager.getId(flag.getPlayer()));
+        jsonFlag.put("id", idManager.getId(flag));
+        jsonFlag.put("playerId", idManager.getId(flag.getPlayer()));
 
         return jsonFlag;
     }
@@ -629,7 +629,7 @@ class Utils {
         }
 
         jsonRoad.put("points", jsonPoints);
-        jsonRoad.put("id", "" + idManager.getId(road));
+        jsonRoad.put("id", idManager.getId(road));
 
         return jsonRoad;
     }
@@ -683,7 +683,7 @@ class Utils {
         jsonSign.put("x", point.x);
         jsonSign.put("y", point.y);
 
-        jsonSign.put("id", "" + idManager.getId(sign));
+        jsonSign.put("id", idManager.getId(sign));
 
         return jsonSign;
     }
@@ -708,7 +708,7 @@ class Utils {
         MapFile mapFile = gamePlaceholder.getMapFile();
 
         if (mapFile != null) {
-            jsonGamePlaceholder.put("mapId", "" + idManager.getId(mapFile));
+            jsonGamePlaceholder.put("mapId", idManager.getId(mapFile));
 
             jsonGamePlaceholder.put("map", mapFileToJson(mapFile));
         }
@@ -717,7 +717,7 @@ class Utils {
             jsonGamePlaceholder.put("name", gamePlaceholder.getName());
         }
 
-        jsonGamePlaceholder.put("id", "" + idManager.getId(gamePlaceholder));
+        jsonGamePlaceholder.put("id", idManager.getId(gamePlaceholder));
 
         /* Return a status of NOT_STARTED because this is a game placeholder */
         jsonGamePlaceholder.put("status", "NOT_STARTED");
@@ -730,7 +730,7 @@ class Utils {
     JSONObject playerToJson(Player player) {
         JSONObject jsonPlayer = new JSONObject();
 
-        jsonPlayer.put("id", "" + idManager.getId(player));
+        jsonPlayer.put("id", idManager.getId(player));
         jsonPlayer.put("name", player.getName());
         jsonPlayer.put("color", colorToHexString(player.getColor()));
 
@@ -755,7 +755,7 @@ class Utils {
         jsonMapFile.put("width", mapFile.getWidth());
         jsonMapFile.put("height", mapFile.getHeight());
         jsonMapFile.put("maxPlayers", mapFile.getMaxNumberOfPlayers());
-        jsonMapFile.put("id", "" + "" + idManager.getId(mapFile));
+        jsonMapFile.put("id", idManager.getId(mapFile));
         jsonMapFile.put("startingPoints", pointsToJson(mapFile.getStartingPoints()));
 
         return jsonMapFile;
@@ -857,7 +857,7 @@ class Utils {
         JSONObject jsonBuildingLostMessage = new JSONObject();
 
         jsonBuildingLostMessage.put("type", "BUILDING_LOST");
-        jsonBuildingLostMessage.put("houseId", "" + idManager.getId(buildingLostMessage.getBuilding()));
+        jsonBuildingLostMessage.put("houseId", idManager.getId(buildingLostMessage.getBuilding()));
 
         return jsonBuildingLostMessage;
     }
@@ -866,7 +866,7 @@ class Utils {
         JSONObject jsonBuildingCapturedMessage = new JSONObject();
 
         jsonBuildingCapturedMessage.put("type", "BUILDING_CAPTURED");
-        jsonBuildingCapturedMessage.put("houseId", "" + idManager.getId(buildingCapturedMessage.getBuilding()));
+        jsonBuildingCapturedMessage.put("houseId", idManager.getId(buildingCapturedMessage.getBuilding()));
 
         return jsonBuildingCapturedMessage;
     }
@@ -875,7 +875,7 @@ class Utils {
         JSONObject jsonStoreHouseIsReadyMessage = new JSONObject();
 
         jsonStoreHouseIsReadyMessage.put("type", "STORE_HOUSE_IS_READY");
-        jsonStoreHouseIsReadyMessage.put("houseId", "" + idManager.getId(storeHouseIsReadyMessage.getBuilding()));
+        jsonStoreHouseIsReadyMessage.put("houseId", idManager.getId(storeHouseIsReadyMessage.getBuilding()));
 
         return jsonStoreHouseIsReadyMessage;
     }
@@ -885,7 +885,7 @@ class Utils {
         jsonMilitaryBuildingOccupiedMessage = new JSONObject();
 
         jsonMilitaryBuildingOccupiedMessage.put("type", MILITARY_BUILDING_READY.toString());
-        jsonMilitaryBuildingOccupiedMessage.put("houseId", "" + idManager.getId(militaryBuildingReadyMessage.getBuilding()));
+        jsonMilitaryBuildingOccupiedMessage.put("houseId", idManager.getId(militaryBuildingReadyMessage.getBuilding()));
 
         return jsonMilitaryBuildingOccupiedMessage;
     }
@@ -894,7 +894,7 @@ class Utils {
         JSONObject jsonNoMoreResourcesMessage = new JSONObject();
 
         jsonNoMoreResourcesMessage.put("type", NO_MORE_RESOURCES.toString());
-        jsonNoMoreResourcesMessage.put("houseId", "" + idManager.getId(noMoreResourcesMessage.getBuilding()));
+        jsonNoMoreResourcesMessage.put("houseId", idManager.getId(noMoreResourcesMessage.getBuilding()));
 
         return jsonNoMoreResourcesMessage;
     }
@@ -913,7 +913,7 @@ class Utils {
         jsonUnderAttackMessage = new JSONObject();
 
         jsonUnderAttackMessage.put("type", UNDER_ATTACK.toString());
-        jsonUnderAttackMessage.put("houseId", "" + idManager.getId(underAttackMessage.getBuilding()));
+        jsonUnderAttackMessage.put("houseId", idManager.getId(underAttackMessage.getBuilding()));
 
         return jsonUnderAttackMessage;
     }
@@ -1235,7 +1235,7 @@ class Utils {
         JSONArray jsonIdArray = new JSONArray();
 
         for (Object gameObject : gameObjects) {
-            jsonIdArray.add("" + idManager.getId(gameObject));
+            jsonIdArray.add(idManager.getId(gameObject));
         }
 
         return jsonIdArray;
@@ -1282,7 +1282,7 @@ class Utils {
                 System.out.println(worker);
             }
 
-            jsonWorkerWithNewTarget.put("id", "" + idManager.getId(worker));
+            jsonWorkerWithNewTarget.put("id", idManager.getId(worker));
             jsonWorkerWithNewTarget.put("path", pointsToJson(worker.getPlannedPath()));
 
             jsonWorkerWithNewTarget.put("x", worker.getPosition().x);

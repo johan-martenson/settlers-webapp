@@ -51,7 +51,6 @@ public class GameTicker {
                     synchronized (map) {
                         map.stepTime();
 
-
                         if (runComputers) {
                             for (ComputerPlayer computerPlayer : computerPlayers) {
                                 synchronized (map) {
