@@ -305,6 +305,18 @@ public class SettlersAPI {
 
                 idManager.updateObject(gameObject, gameResource.getMap());
 
+                /* Limit the amount of wild animals to make performance bearable -- temporary! */
+                List<WildAnimal> wildAnimals = map.getWildAnimals();
+                List<WildAnimal> reducedWildAnimals = new ArrayList<>(wildAnimals);
+
+                if (reducedWildAnimals.size() > 10) {
+                    reducedWildAnimals = reducedWildAnimals.subList(0, 10);
+                }
+
+                wildAnimals.clear();
+
+                wildAnimals.addAll(reducedWildAnimals);
+
                 /* Place a headquarter for each player */
                 List<Player> players = map.getPlayers();
                 List<Point> startingPoints = map.getStartingPoints();
