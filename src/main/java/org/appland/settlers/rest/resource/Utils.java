@@ -49,6 +49,7 @@ import org.appland.settlers.model.Sign;
 import org.appland.settlers.model.Size;
 import org.appland.settlers.model.SlaughterHouse;
 import org.appland.settlers.model.Stone;
+import org.appland.settlers.model.Storehouse;
 import org.appland.settlers.model.StoreHouseIsReadyMessage;
 import org.appland.settlers.model.Terrain;
 import org.appland.settlers.model.Tile;
@@ -399,7 +400,7 @@ class Utils {
 
         jsonHouse.put("resources", jsonResources);
 
-        if (building.underConstruction()) {
+        if (building.isUnderConstruction()) {
             jsonHouse.put("state", "UNFINISHED");
         } else if (building.isReady() && !building.isOccupied()) {
             jsonHouse.put("state", "UNOCCUPIED");
@@ -411,7 +412,7 @@ class Utils {
             jsonHouse.put("state", "DESTROYED");
         }
 
-        if (building.underConstruction()) {
+        if (building.isUnderConstruction()) {
             jsonHouse.put("constructionProgress", building.getConstructionProgress());
         }
 
@@ -558,6 +559,9 @@ class Utils {
                 break;
             case "Brewery":
                 building = new Brewery(player);
+                break;
+            case "Storehouse":
+                building = new Storehouse(player);
                 break;
             default:
                 System.out.println("DON'T KNOW HOW TO CREATE BUILDING " + buildingType);
@@ -939,6 +943,10 @@ class Utils {
 
         jsonMonitoringEvents.put("time", gameChangesList.getTime());
 
+        if (!gameChangesList.getNewStones().isEmpty()) {
+            jsonMonitoringEvents.put("newStones", newStonesToJson(gameChangesList.getNewStones()));
+        }
+
         if (!gameChangesList.getWorkersWithNewTargets().isEmpty()) {
             jsonMonitoringEvents.put("workersWithNewTargets", workersWithNewTargetsToJson(gameChangesList.getWorkersWithNewTargets()));
         }
@@ -1023,6 +1031,16 @@ class Utils {
         }
 
         return jsonMonitoringEvents;
+    }
+
+    private JSONArray newStonesToJson(List<Stone> newStones) {
+        JSONArray jsonNewStones = new JSONArray();
+
+        for (Stone stone : newStones) {
+            jsonNewStones.add(pointToJson(stone.getPosition()));
+        }
+
+        return jsonNewStones;
     }
 
     private JSONArray messagesToJson(List<Message> newGameMessages) {

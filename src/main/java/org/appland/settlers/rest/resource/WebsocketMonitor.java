@@ -46,6 +46,21 @@ public class WebsocketMonitor implements PlayerGameViewMonitor {
     @OnError
     public void onError(Session session, Throwable throwable) {
         System.out.println("ON ERROR: " + throwable);
+
+        /* Remove the error session */
+        Player player = null;
+        for (Map.Entry<Player, Session> entry : sessions.entrySet()) {
+            if (entry.getValue().equals(session)) {
+                player = entry.getKey();
+
+                break;
+            }
+        }
+
+        if (player != null) {
+            System.out.println("Removing session for player: " + player);
+            sessions.remove(player);
+        }
     }
 
     @OnOpen
@@ -72,6 +87,8 @@ public class WebsocketMonitor implements PlayerGameViewMonitor {
             JSONObject jsonGameMonitoringEvent = utils.gameMonitoringEventsToJson(gameChangesList, player);
 
             System.out.println(gameChangesList);
+
+            System.out.println("\nAmount of wild animals: " + player.getMap().getWildAnimals().size() + "\n");
 
             sessions.get(player).getAsyncRemote().sendText(jsonGameMonitoringEvent.toJSONString());
         } catch (Exception e) {

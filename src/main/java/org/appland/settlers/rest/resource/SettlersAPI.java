@@ -750,7 +750,7 @@ public class SettlersAPI {
 
     @GET
     @Path("/games/{gameId}/players/{playerId}/houses/{houseId}")
-    public Response getHouse(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("houseId") String houseId) {
+    public Response getHouse(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("houseId") String houseId, @QueryParam("askingPlayerId") String askingPlayerId) {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
         Building building = (Building) idManager.getObject(houseId);
@@ -801,10 +801,29 @@ public class SettlersAPI {
             return Response.status(404).entity(message.toJSONString()).build();
         }
 
+        Player askingPlayer = null;
+
+        if (askingPlayerId != null) {
+            askingPlayer = (Player) idManager.getObject(askingPlayerId);
+        }
+
         JSONObject jsonHouse;
 
         synchronized (building.getMap()) {
             jsonHouse = utils.houseToJson(building);
+
+            if (askingPlayer != null) {
+                try {
+                    int maxAttackers = askingPlayer.getAvailableAttackersForBuilding(building);
+
+                    if (maxAttackers > 0) {
+
+                        jsonHouse.put("maxAttackers", maxAttackers);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
         return Response.status(200).entity(jsonHouse.toJSONString()).build();
