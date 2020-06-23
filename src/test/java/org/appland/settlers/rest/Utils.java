@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class Utils {
     public static Map<String, Integer> pointToMap(Point point) {
-        Map pointMap = new HashMap<>();
+        Map<String, Integer> pointMap = new HashMap<>();
 
         pointMap.put("x", point.x);
         pointMap.put("y", point.y);

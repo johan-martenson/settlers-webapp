@@ -380,20 +380,18 @@ class Utils {
         JSONObject jsonResources = new JSONObject();
 
         for (Material material : Material.values()) {
-            int amountNeeded = building.getTotalAmountNeeded(material);
+            int amountTotalNeeded = building.getTotalAmountNeeded(material);
             int amountAvailable = building.getAmount(material);
 
             JSONObject jsonResource = new JSONObject();
 
-            if (amountNeeded > 0) {
-                jsonResource.put("needs", amountNeeded);
-            }
-
-            if (amountAvailable > 0) {
+            if (amountAvailable > 0 || amountTotalNeeded > 0) {
                 jsonResource.put("has", amountAvailable);
-            }
 
-            if (amountAvailable > 0 || amountNeeded > 0) {
+                if (amountTotalNeeded > 0) {
+                    jsonResource.put("totalNeeded", amountTotalNeeded);
+                }
+
                 jsonResources.put(material.name().toLowerCase(), jsonResource);
             }
         }
