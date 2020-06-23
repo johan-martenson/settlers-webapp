@@ -815,7 +815,7 @@ class Utils {
         }
     }
 
-    private void deliver(Material material, int amount, Headquarter headquarter) throws Exception {
+    private void deliver(Material material, int amount, Headquarter headquarter) {
 
         for (int i = 0; i < amount; i++) {
             headquarter.promiseDelivery(material);

@@ -646,7 +646,7 @@ public class SettlersAPI {
 
     @GET
     @Path("/games/{gameId}/map/points")
-    public Response getPoint(@PathParam("gameId") String gameId, @QueryParam("playerId") String playerId, @QueryParam("x") int x, @QueryParam("y") int y) throws Exception {
+    public Response getPoint(@PathParam("gameId") String gameId, @QueryParam("playerId") String playerId, @QueryParam("x") int x, @QueryParam("y") int y) {
         Point point = new Point(x, y);
         GameMap map = (GameMap)idManager.getObject(gameId);
         Player player = (Player)idManager.getObject(playerId);

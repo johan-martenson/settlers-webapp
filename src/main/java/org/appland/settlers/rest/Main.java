@@ -12,7 +12,6 @@ import javax.websocket.server.ServerContainer;
 public class Main {
 
     private static final String APPLICATION_PATH = "/settlers/api/*";
-    private static final String WEBSOCKET_PATH = "/ws/*";
     private static final String CONTEXT_ROOT = "/";
 
     public static void main(String[] args) throws Exception {
@@ -29,7 +28,7 @@ public class Main {
         // Setup the basic Application "context" at "/".
         // This is also known as the handler tree (in Jetty speak).
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
-        context.setContextPath("/");
+        context.setContextPath(CONTEXT_ROOT);
         server.setHandler(context);
 
         // Add javax.websocket support
