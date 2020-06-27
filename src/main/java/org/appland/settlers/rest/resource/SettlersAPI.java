@@ -991,6 +991,8 @@ public class SettlersAPI {
         Building building = (Building) idManager.getObject(houseId);
         Player player = (Player) idManager.getObject(playerId);
 
+        System.out.println("PUT house " + building);
+
         if (map == null) {
             JSONObject message = new JSONObject();
 
@@ -1076,9 +1078,18 @@ public class SettlersAPI {
 
                 jsonResponse = utils.houseToJson(building);
             }
-        } else if(jsonHouseModification.containsKey("attack")) {
+        }
+
+        if(jsonHouseModification.containsKey("attack")) {
+
+            System.out.println("Attacking");
+
+            System.out.println("Player is " + player);
+            System.out.println("Player of building is " + building.getPlayer());
 
             if (building.getPlayer().equals(player)) {
+
+                System.out.println("");
 
                 synchronized (player.getMap()) {
                     player.attack(building, 1);
@@ -1754,6 +1765,18 @@ public class SettlersAPI {
         jsonResponse.put("materialStatistics", jsonProductionStatisticsForAllMaterials);
 
         return Response.status(200).entity(jsonResponse.toJSONString()).build();
+    }
+
+    @GET
+    @Path("/games/{gameId}/players/{playerId}/transportPriority")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getTransportPriority(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId) {
+        GameMap map = (GameMap) idManager.getObject(gameId);
+        Player player = (Player) idManager.getObject(playerId);
+
+        JSONArray jsonTransportPriority = utils.transportPriorityToJson(player.getTransportPriorityList());
+
+        return Response.status(200).entity(jsonTransportPriority.toJSONString()).build();
     }
 
     @GET

@@ -52,7 +52,7 @@ import org.appland.settlers.model.Stone;
 import org.appland.settlers.model.Storehouse;
 import org.appland.settlers.model.StoreHouseIsReadyMessage;
 import org.appland.settlers.model.Terrain;
-import org.appland.settlers.model.Tile;
+import org.appland.settlers.model.Vegetation;
 import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.TreeConservationProgramActivatedMessage;
 import org.appland.settlers.model.TreeConservationProgramDeactivatedMessage;
@@ -248,11 +248,11 @@ class Utils {
                 for (int x = start; x + 1 < map.getWidth(); x += 2) {
                     Point p = new Point(x, y);
 
-                    Tile below = terrain.getTileBelow(p);
-                    Tile belowRight = terrain.getTileDownRight(p);
+                    Vegetation below = terrain.getTileBelow(p);
+                    Vegetation belowRight = terrain.getTileDownRight(p);
 
-                    jsonTrianglesBelow.add(vegetationToJson(below.getVegetationType()));
-                    jsonTrianglesBelowRight.add(vegetationToJson(belowRight.getVegetationType()));
+                    jsonTrianglesBelow.add(vegetationToJson(below));
+                    jsonTrianglesBelowRight.add(vegetationToJson(belowRight));
                     jsonHeights.add(map.getHeightAtPoint(p));
                 }
 
@@ -267,7 +267,7 @@ class Utils {
         return jsonTerrain;
     }
 
-    private String vegetationToJson(Tile.Vegetation v) {
+    private String vegetationToJson(Vegetation v) {
         switch (v) {
             case GRASS:
                 return "G";
@@ -1298,6 +1298,7 @@ class Utils {
                 System.out.println(worker);
             }
 
+            
             jsonWorkerWithNewTarget.put("id", idManager.getId(worker));
             jsonWorkerWithNewTarget.put("path", pointsToJson(worker.getPlannedPath()));
 
@@ -1310,5 +1311,15 @@ class Utils {
         }
 
         return jsonWorkersWithNewTarget;
+    }
+
+    public JSONArray transportPriorityToJson(List<Material> transportPriorityList) {
+        JSONArray jsonTransportPriority = new JSONArray();
+
+        for (Material material : transportPriorityList) {
+            jsonTransportPriority.add(material.name().toLowerCase());
+        }
+
+        return jsonTransportPriority;
     }
 }
