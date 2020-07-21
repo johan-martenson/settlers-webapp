@@ -140,7 +140,7 @@
   <properties>
     <maven-jar-plugin.version>3.2.0</maven-jar-plugin.version>
     <websocket-api.version>1.1</websocket-api.version>
-    <resteasy.version>3.11.2.Final</resteasy.version>
+    <resteasy.version>3.13.0.Final</resteasy.version>
     <json.version>1.1.1</json.version>
     <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
     <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
