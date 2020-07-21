@@ -51,7 +51,6 @@ import org.appland.settlers.model.SlaughterHouse;
 import org.appland.settlers.model.Stone;
 import org.appland.settlers.model.Storehouse;
 import org.appland.settlers.model.StoreHouseIsReadyMessage;
-import org.appland.settlers.model.Terrain;
 import org.appland.settlers.model.Vegetation;
 import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.TreeConservationProgramActivatedMessage;
@@ -68,7 +67,10 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -242,14 +244,12 @@ class Utils {
             jsonTerrain.put("width", map.getWidth());
             jsonTerrain.put("height", map.getHeight());
 
-            Terrain terrain = map.getTerrain();
-
             for (int y = 1; y < map.getHeight(); y++) {
                 for (int x = start; x + 1 < map.getWidth(); x += 2) {
                     Point p = new Point(x, y);
 
-                    Vegetation below = terrain.getTileBelow(p);
-                    Vegetation belowRight = terrain.getTileDownRight(p);
+                    Vegetation below = map.getTileBelow(p);
+                    Vegetation belowRight = map.getTileDownRight(p);
 
                     jsonTrianglesBelow.add(vegetationToJson(below));
                     jsonTrianglesBelowRight.add(vegetationToJson(belowRight));
@@ -1321,5 +1321,24 @@ class Utils {
         }
 
         return jsonTransportPriority;
+    }
+
+    public Set<Point> jsonToPointsSet(JSONArray avoid) {
+        Set<Point> pointsSet = new HashSet<>();
+
+        for (Object jsonPoint : avoid) {
+            Point point = jsonToPoint((JSONObject) jsonPoint);
+
+            pointsSet.add(point);
+        }
+
+        return pointsSet;
+    }
+
+    public void printTimestamp(String message) {
+
+        Date date = new Date();
+        long timeMilli = date.getTime();
+        System.out.println(message + ": " + timeMilli);
     }
 }
