@@ -9,6 +9,7 @@ import org.appland.settlers.model.Flag;
 import org.appland.settlers.model.GameMap;
 import org.appland.settlers.model.GeologistFindMessage;
 import org.appland.settlers.model.Headquarter;
+import org.appland.settlers.model.InvalidUserActionException;
 import org.appland.settlers.model.LandDataPoint;
 import org.appland.settlers.model.LandStatistics;
 import org.appland.settlers.model.Material;
@@ -810,6 +811,7 @@ public class SettlersAPI {
         JSONObject jsonHouse;
 
         synchronized (building.getMap()) {
+
             jsonHouse = utils.houseToJson(building);
 
             if (askingPlayer != null) {
@@ -943,6 +945,8 @@ public class SettlersAPI {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
 
+        utils.printTimestamp("Entered createHouse on server");
+
         if (map == null) {
             JSONObject message = new JSONObject();
 
@@ -978,7 +982,11 @@ public class SettlersAPI {
         Building building = utils.buildingFactory(jsonHouse, player);
 
         synchronized (map) {
+            utils.printTimestamp("About to place building");
+
             map.placeBuilding(building, point);
+
+            utils.printTimestamp("Placed building");
         }
 
         return Response.status(201).entity(utils.houseToJson(building).toJSONString()).build();
@@ -986,7 +994,7 @@ public class SettlersAPI {
 
     @PUT
     @Path("/games/{gameId}/players/{playerId}/houses/{houseId}")
-    public Response updateHouse(@PathParam("gameId") int gameId, @PathParam("playerId") String playerId, @PathParam("houseId") String houseId, String body) throws Exception {
+    public Response updateHouse(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("houseId") String houseId, String body) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Building building = (Building) idManager.getObject(houseId);
         Player player = (Player) idManager.getObject(playerId);
@@ -1080,19 +1088,24 @@ public class SettlersAPI {
             }
         }
 
-        if(jsonHouseModification.containsKey("attack")) {
+        if(jsonHouseModification.containsKey("attacked")) {
 
             System.out.println("Attacking");
 
             System.out.println("Player is " + player);
             System.out.println("Player of building is " + building.getPlayer());
 
-            if (building.getPlayer().equals(player)) {
+            JSONObject jsonAttackInformation = (JSONObject) jsonHouseModification.get("attacked");
+
+            String attackingPlayerId = (String) jsonAttackInformation.get("attackingPlayerId");
+            Player attackingPlayer = (Player) idManager.getObject(attackingPlayerId);
+
+            if (!building.getPlayer().equals(attackingPlayer)) {
 
                 System.out.println("");
 
                 synchronized (player.getMap()) {
-                    player.attack(building, 1);
+                    attackingPlayer.attack(building, 1);
                 }
 
                 jsonResponse.put("message", "Attacking building");
@@ -1513,7 +1526,7 @@ public class SettlersAPI {
             }
 
             /* Fill in available construction */
-            for (Point point : player.getAvailableFlagPoints()) {
+            for (Point point : map.getAvailableFlagPoints(player)) {
 
                 /* Filter points not discovered yet */
                 if (!player.getDiscoveredLand().contains(point)) {
@@ -1527,7 +1540,7 @@ public class SettlersAPI {
                 ((JSONArray)jsonAvailableConstruction.get(key)).add("flag");
             }
 
-            for (Map.Entry<Point, Size> site : player.getAvailableHousePoints().entrySet()) {
+            for (Map.Entry<Point, Size> site : map.getAvailableHousePoints(player).entrySet()) {
 
                 /* Filter points not discovered yet */
                 if (!player.getDiscoveredLand().contains(site.getKey())) {
@@ -1541,22 +1554,7 @@ public class SettlersAPI {
                 ((JSONArray)jsonAvailableConstruction.get(key)).add("" + site.getValue().toString().toLowerCase());
             }
 
-            for (Point point : player.getAvailableMiningPoints()) {
-
-                /* Filter points not discovered yet */
-                if (!player.getDiscoveredLand().contains(point)) {
-                    continue;
-                }
-
-                String key = "" + point.x + "," + point.y;
-
-                jsonAvailableConstruction.putIfAbsent(key, new JSONArray());
-
-                ((JSONArray)jsonAvailableConstruction.get(key)).add("mine");
-            }
-
-            // TODO: verify that it's wrong to do this twice!
-            for (Point point : player.getAvailableMiningPoints()) {
+            for (Point point : map.getAvailableMinePoints(player)) {
 
                 /* Filter points not discovered yet */
                 if (!player.getDiscoveredLand().contains(point)) {
@@ -1613,10 +1611,10 @@ public class SettlersAPI {
 
         Point start = utils.jsonToPoint((JSONObject) jsonNewRoadParameters.get("from"));
         Point goal = utils.jsonToPoint((JSONObject) jsonNewRoadParameters.get("to"));
-        List<Point> avoid = null;
+        Set<Point> avoid = null;
 
         if (jsonNewRoadParameters.containsKey("avoid")) {
-            avoid = utils.jsonToPoints((JSONArray) jsonNewRoadParameters.get("avoid"));
+            avoid = utils.jsonToPointsSet((JSONArray) jsonNewRoadParameters.get("avoid"));
         }
 
         List<Point> possibleRoad;
@@ -1765,6 +1763,34 @@ public class SettlersAPI {
         jsonResponse.put("materialStatistics", jsonProductionStatisticsForAllMaterials);
 
         return Response.status(200).entity(jsonResponse.toJSONString()).build();
+    }
+
+    @PATCH
+    @Path("/games/{gameId}/players/{playerId}/transportPriority")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setTransportPriority(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, String body) throws ParseException, InvalidUserActionException {
+        GameMap map = (GameMap) idManager.getObject(gameId);
+        Player player = (Player) idManager.getObject(playerId);
+
+        JSONObject jsonBody = (JSONObject) parser.parse(body);
+
+        Material material = jsonToMaterial((String)jsonBody.get("material"));
+        int priority = (Integer) jsonBody.get("priority");
+
+        System.out.println("Material: " + material);
+        System.out.println("Priority: " + priority);
+
+        synchronized (map) {
+            player.setTransportPriority(priority, material);
+        }
+
+        JSONArray jsonTransportPriority = utils.transportPriorityToJson(player.getTransportPriorityList());
+
+        return Response.status(200).entity(jsonTransportPriority.toJSONString()).build();
+    }
+
+    private Material jsonToMaterial(String material) {
+        return Material.valueOf(material);
     }
 
     @GET
