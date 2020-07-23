@@ -992,7 +992,7 @@ public class SettlersAPI {
         return Response.status(201).entity(utils.houseToJson(building).toJSONString()).build();
     }
 
-    @PUT
+    @PATCH
     @Path("/games/{gameId}/players/{playerId}/houses/{houseId}")
     public Response updateHouse(@PathParam("gameId") String gameId, @PathParam("playerId") String playerId, @PathParam("houseId") String houseId, String body) throws Exception {
         GameMap map = (GameMap) idManager.getObject(gameId);
@@ -1053,8 +1053,9 @@ public class SettlersAPI {
 
         boolean doEvacuationChange = jsonHouseModification.containsKey("evacuate");
         boolean doPromotionsChange = jsonHouseModification.containsKey("promotionsEnabled");
+        boolean doUpgrade = jsonHouseModification.containsKey("upgrade");
 
-        if (doEvacuationChange || doPromotionsChange) {
+        if (doEvacuationChange || doPromotionsChange || doUpgrade) {
 
             boolean evacuate = (boolean)jsonHouseModification.getOrDefault("evacuate", false);
             boolean promotionsEnabled = (boolean)jsonHouseModification.getOrDefault("promotionsEnabled", false);
@@ -1082,13 +1083,17 @@ public class SettlersAPI {
                             building.disablePromotions();
                         }
                     }
+
+                    if (doUpgrade) {
+                        building.upgrade();
+                    }
                 }
 
                 jsonResponse = utils.houseToJson(building);
             }
         }
 
-        if(jsonHouseModification.containsKey("attacked")) {
+        if (jsonHouseModification.containsKey("attacked")) {
 
             System.out.println("Attacking");
 
