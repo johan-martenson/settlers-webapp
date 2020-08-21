@@ -27,6 +27,7 @@ import org.appland.settlers.model.Size;
 import org.appland.settlers.model.StatisticsManager;
 import org.appland.settlers.model.Stone;
 import org.appland.settlers.model.StoreHouseIsReadyMessage;
+import org.appland.settlers.model.TransportCategory;
 import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.UnderAttackMessage;
 import org.appland.settlers.model.WildAnimal;
@@ -1779,23 +1780,23 @@ public class SettlersAPI {
 
         JSONObject jsonBody = (JSONObject) parser.parse(body);
 
-        Material material = jsonToMaterial((String)jsonBody.get("material"));
-        int priority = (Integer) jsonBody.get("priority");
+        TransportCategory category = jsonToTransportatCategory((String)jsonBody.get("material"));
+        int priority = ((Long) jsonBody.get("priority")).intValue();
 
-        System.out.println("Material: " + material);
+        System.out.println("Material: " + category);
         System.out.println("Priority: " + priority);
 
         synchronized (map) {
-            player.setTransportPriority(priority, material);
+            player.setTransportPriority(priority, category);
         }
 
-        JSONArray jsonTransportPriority = utils.transportPriorityToJson(player.getTransportPriorityList());
+        JSONArray jsonTransportPriority = utils.transportPriorityToJson(player.getTransportPriorities());
 
         return Response.status(200).entity(jsonTransportPriority.toJSONString()).build();
     }
 
-    private Material jsonToMaterial(String material) {
-        return Material.valueOf(material);
+    private TransportCategory jsonToTransportatCategory(String category) {
+        return TransportCategory.valueOf(category.toUpperCase());
     }
 
     @GET
@@ -1805,7 +1806,7 @@ public class SettlersAPI {
         GameMap map = (GameMap) idManager.getObject(gameId);
         Player player = (Player) idManager.getObject(playerId);
 
-        JSONArray jsonTransportPriority = utils.transportPriorityToJson(player.getTransportPriorityList());
+        JSONArray jsonTransportPriority = utils.transportPriorityToJson(player.getTransportPriorities());
 
         return Response.status(200).entity(jsonTransportPriority.toJSONString()).build();
     }

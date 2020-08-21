@@ -51,6 +51,7 @@ import org.appland.settlers.model.SlaughterHouse;
 import org.appland.settlers.model.Stone;
 import org.appland.settlers.model.Storehouse;
 import org.appland.settlers.model.StoreHouseIsReadyMessage;
+import org.appland.settlers.model.TransportCategory;
 import org.appland.settlers.model.Vegetation;
 import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.TreeConservationProgramActivatedMessage;
@@ -599,7 +600,7 @@ class Utils {
                 jsonWorker.put("next", pointToJson(worker.getNextPoint()));
 
             } catch(Exception e) {
-                System.out.println("" + e);
+                System.out.println("Exception while serializing worker: " + e);
             }
 
             jsonWorker.put("percentageTraveled", worker.getPercentageOfDistanceTraveled());
@@ -1313,11 +1314,11 @@ class Utils {
         return jsonWorkersWithNewTarget;
     }
 
-    public JSONArray transportPriorityToJson(List<Material> transportPriorityList) {
+    public JSONArray transportPriorityToJson(List<TransportCategory> transportPriorityList) {
         JSONArray jsonTransportPriority = new JSONArray();
 
-        for (Material material : transportPriorityList) {
-            jsonTransportPriority.add(material.name().toLowerCase());
+        for (TransportCategory category : transportPriorityList) {
+            jsonTransportPriority.add(category.name().toLowerCase());
         }
 
         return jsonTransportPriority;

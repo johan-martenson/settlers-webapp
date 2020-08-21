@@ -47,7 +47,7 @@ class DeploymentListener implements ServletContextListener {
                     mapFiles.add(mapFile);
                 } catch (Exception | InvalidMapException e) {
                     System.out.println(mapFilename.toString());
-                    System.out.println(e);
+                    System.out.println("Exception while loading maps: " + e);
                 }
             }
         }

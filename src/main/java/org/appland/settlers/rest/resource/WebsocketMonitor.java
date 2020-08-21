@@ -81,17 +81,25 @@ public class WebsocketMonitor implements PlayerGameViewMonitor {
     @Override
     public void onViewChangesForPlayer(Player player, GameChangesList gameChangesList) {
         try {
-            //System.out.println("\nView changed");
 
-            JSONObject jsonGameMonitoringEvent = utils.gameMonitoringEventsToJson(gameChangesList, player);
+            Session session = sessions.get(player);
 
-            //System.out.println(gameChangesList);
+            if (session != null) {
 
-            //System.out.println("\nAmount of wild animals: " + player.getMap().getWildAnimals().size() + "\n");
+                //System.out.println("\nView changed");
 
-            sessions.get(player).getAsyncRemote().sendText(jsonGameMonitoringEvent.toJSONString());
+                JSONObject jsonGameMonitoringEvent = utils.gameMonitoringEventsToJson(gameChangesList, player);
+
+                session.getAsyncRemote().sendText(jsonGameMonitoringEvent.toJSONString());
+
+                //System.out.println(gameChangesList);
+
+                //System.out.println("\nAmount of wild animals: " + player.getMap().getWildAnimals().size() + "\n");
+            }
+
         } catch (Exception e) {
-            System.out.println(e);
+            System.out.println("Exception while sending updates to frontend: " + e);
+            e.printStackTrace();
         }
     }
 }

@@ -130,7 +130,7 @@ public class GameTicker {
                         System.out.println("Average: " + stats.getAverageForVariable(COMPUTER_PLAYERS_TICK_TIME) + " (ms)");
                     }
                 } catch (Throwable e) {
-                    System.out.println(e);
+                    System.out.println("Exception during game loop or computer players: " + e);
                     e.printStackTrace();
                 }
             }
