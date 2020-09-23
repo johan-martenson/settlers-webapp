@@ -1,9 +1,16 @@
 package org.appland.settlers.rest;
 
+import org.appland.settlers.computer.CompositePlayer;
 import org.appland.settlers.computer.ComputerPlayer;
+import org.appland.settlers.model.Building;
 import org.appland.settlers.model.GameMap;
+import org.appland.settlers.model.Headquarter;
+import org.appland.settlers.model.Scout;
 import org.appland.settlers.rest.resource.GameResource;
+import org.appland.settlers.utils.CumulativeDuration;
+import org.appland.settlers.utils.Group;
 import org.appland.settlers.utils.Stats;
+import org.appland.settlers.utils.Variable;
 
 import java.util.Date;
 import java.util.HashSet;
@@ -17,9 +24,9 @@ import java.util.concurrent.TimeUnit;
 public class GameTicker {
 
     private static final int COMPUTER_PLAYER_FREQUENCY = 100;
-    private static final String FULL_TICK_TIME = "Time for full tick";
-    private static final String MAP_TICK_TIME = "Time for map.stepTime()";
-    private static final String COMPUTER_PLAYERS_TICK_TIME = "Time for running all computer players";
+    private static final String FULL_TICK_TIME = "GameTicker.tick.total";
+    private static final String MAP_TICK_TIME = "GameTicker.tick.Map.stepTime";
+    private static final String COMPUTER_PLAYERS_TICK_TIME = "GameTicker.tick.ComputerPlayer.turn";
 
     private final ScheduledExecutorService scheduler;
     private final Set<GameResource> games;
@@ -41,9 +48,7 @@ public class GameTicker {
 
         stats = new Stats();
 
-        stats.addVariable(FULL_TICK_TIME);
-        stats.addVariable(MAP_TICK_TIME);
-        stats.addVariable(COMPUTER_PLAYERS_TICK_TIME);
+        stats.setUpperThreshold(FULL_TICK_TIME, 150);
     }
 
     void deactivate() {
@@ -53,6 +58,19 @@ public class GameTicker {
     void activate() {
         handle = scheduler.scheduleAtFixedRate(() -> {
             boolean runComputers = false;
+
+            Group group = null;
+            CumulativeDuration duration = null;
+            Variable computerPlayerTurns = null;
+
+            try {
+                group = stats.createVariableGroupIfAbsent("GameTickGroup");
+                duration = stats.measureCumulativeDuration("GameTicker.tick", group);
+                computerPlayerTurns = stats.addIncrementingVariableIfAbsent("ComputerPlayerTurns");
+            } catch (Throwable e) {
+                System.out.println(e);
+                e.printStackTrace();
+            }
 
             if (counter == COMPUTER_PLAYER_FREQUENCY) {
                 runComputers = true;
@@ -64,74 +82,97 @@ public class GameTicker {
 
                 List<ComputerPlayer> computerPlayers = game.getComputerPlayers();
 
-                try {
-                    long timestampStartingTick;
-                    long timestampAfterMapStepTime;
-                    long timestampAtEndOfTick;
+                synchronized (map) {
 
-                    synchronized (map) {
-                        timestampStartingTick = getTimestamp();
-
+                    try {
                         map.stepTime();
+                    } catch (Throwable e) {
+                        System.out.println("Exception during game loop: " + e);
+                        e.printStackTrace();
+                    }
 
-                        timestampAfterMapStepTime = getTimestamp();
+                    duration.after("Map.stepTime");
 
-                        if (runComputers) {
-                            for (ComputerPlayer computerPlayer : computerPlayers) {
-                                synchronized (map) {
+                    if (runComputers) {
+                        for (ComputerPlayer computerPlayer : computerPlayers) {
+                            synchronized (map) {
+
+                                try {
                                     computerPlayer.turn();
+
+                                    Stats computerPlayerStats = ((CompositePlayer)computerPlayer).getStats();
+
+                                    computerPlayerTurns.reportValue(1);
+
+                                    Variable totalTurn = computerPlayerStats.getVariable("CompositePlayer.turn.total");
+
+                                    if (totalTurn.isLatestValueHighest()) {
+                                        stats.printVariablesAsTable();
+                                        computerPlayerStats.printVariablesAsTable();
+                                    }
+
+                                } catch (Throwable e) {
+                                    System.out.println("Exception during computer player turn");
+                                    e.printStackTrace();
                                 }
                             }
-                        }
 
-                        timestampAtEndOfTick = getTimestamp();
-                    }
-
-                    long timeOfMapStepTime = timestampAfterMapStepTime - timestampStartingTick;
-                    long timeOfTick = timestampAtEndOfTick - timestampStartingTick;
-                    long timeOfComputerPlayers = timestampAtEndOfTick - timestampAfterMapStepTime;
-
-                    stats.reportVariableValue(FULL_TICK_TIME, timeOfTick);
-                    stats.reportVariableValue(MAP_TICK_TIME, timeOfMapStepTime);
-                    stats.reportVariableValue(COMPUTER_PLAYERS_TICK_TIME, timeOfComputerPlayers);
-
-                    if (stats.isVariableLatestValueHighest(MAP_TICK_TIME)) {
-                        System.out.println("\nNew highest time for map.stepTime(): " +
-                                stats.getHighestValueForVariable(MAP_TICK_TIME) +
-                                " (ms)");
-
-                        System.out.println("Average: " + stats.getAverageForVariable(MAP_TICK_TIME) + " (ms)");
-
-                        Stats mapStats = map.getStats();
-
-                        for (String name : mapStats.getVariables()) {
-                            System.out.println();
-                            System.out.println("  " + name + ":");
-                            System.out.println("   -- Latest: " + mapStats.getLatestValueForVariable(name));
-                            System.out.println("   -- Average: " + mapStats.getAverageForVariable(name));
-                            System.out.println("   -- Highest: " + mapStats.getHighestValueForVariable(name));
-                            System.out.println("   -- Lowest: " + mapStats.getLatestValueForVariable(name));
+                            duration.after("ComputerPlayer.turn");
                         }
                     }
+                }
 
-                    if (stats.isVariableLatestValueHighest(FULL_TICK_TIME)) {
-                        System.out.println("\nNew highest time for full tick: " +
-                                stats.getHighestValueForVariable(FULL_TICK_TIME) +
-                                " (ms)");
+                try {
+                    duration.report();
 
-                        System.out.println("Average: " + stats.getAverageForVariable(FULL_TICK_TIME) + " (ms)");
+                    group.collectionPeriodDone();
+
+                    boolean printStats = false;
+
+                    Variable mapStepTime = stats.getVariable("GameTicker.tick.Map.stepTime");
+                    Variable computerPlayerTurn = stats.getVariable("GameTicker.tick.ComputerPlayer.turn");
+                    Variable fullTick = stats.getVariable("GameTicker.tick.total");
+
+                    if (mapStepTime.isLatestValueHighest()) {
+                        System.out.println("\nNew highest time for map.stepTime(): " + mapStepTime.getHighestValue() + " (ms)");
+
+                        System.out.println("Upper threshold is: " + mapStepTime.getUpperThreshold());
+
+                        printStats = true;
+
                     }
 
-                    if (stats.isVariableLatestValueHighest(COMPUTER_PLAYERS_TICK_TIME)) {
-                        System.out.println("\nNew highest time for computer players: " +
-                                stats.getHighestValueForVariable(COMPUTER_PLAYERS_TICK_TIME) +
-                                " (ms)");
+                    if (runComputers && computerPlayerTurn != null && computerPlayerTurn.isLatestValueHighest()) {
+                        System.out.println("\nNew highest time for computer players: " + computerPlayerTurn.getHighestValue() + " (ms)");
 
-                        System.out.println("Average: " + stats.getAverageForVariable(COMPUTER_PLAYERS_TICK_TIME) + " (ms)");
+                        System.out.println("Average: " + computerPlayerTurn.getAverage() + " (ms)");
+
+
+
+                        printStats = true;
                     }
-                } catch (Throwable e) {
-                    System.out.println("Exception during game loop or computer players: " + e);
-                    e.printStackTrace();
+
+                    if (fullTick.isLatestValueHighest()) {
+                        System.out.println("\nNew highest time for full tick: " + fullTick.getHighestValue() + " (ms)");
+
+                        System.out.println("Average: " + fullTick.getAverage() + " (ms)");
+
+                        printStats = true;
+                    }
+
+                    if (fullTick.isUpperThresholdExceeded()) {
+                        System.out.println("\nMap step time exceeded threshold");
+
+                        printStats = true;
+                    }
+
+                    if (printStats) {
+                        stats.printVariablesAsTable();
+                        map.getStats().printVariablesAsTable();
+                    }
+                } catch (Throwable t) {
+                    System.out.println(t);
+                    t.printStackTrace();
                 }
             }
 
@@ -150,5 +191,30 @@ public class GameTicker {
 
     public void startGame(GameResource gameResource) {
         games.add(gameResource);
+
+        GameMap map = gameResource.getMap();
+
+        for (Building building : map.getBuildings()) {
+            if (building instanceof Headquarter) {
+                Headquarter headquarter = (Headquarter) building;
+
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+                headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
+            }
+        }
+
+        Stats stats = map.getStats();
     }
 }

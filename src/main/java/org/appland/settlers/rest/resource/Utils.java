@@ -376,6 +376,8 @@ class Utils {
             for (Material material : building.getProducedMaterial()) {
                 jsonProduces.add(material.name());
             }
+
+            jsonHouse.put("productionEnabled", building.isProductionEnabled());
         }
 
         JSONObject jsonResources = new JSONObject();
@@ -427,6 +429,10 @@ class Utils {
             jsonHouse.put("maxSoldiers", building.getMaxHostedMilitary());
             jsonHouse.put("evacuated", building.isEvacuated());
             jsonHouse.put("promotionsEnabled", building.isPromotionEnabled());
+
+            if (building.isUpgrading()) {
+                jsonHouse.put("upgrading", true);
+            }
         }
 
         return jsonHouse;
@@ -608,6 +614,11 @@ class Utils {
         } else {
             jsonWorker.put("percentageTraveled", 0);
         }
+
+        if (worker.getCargo() != null) {
+            jsonWorker.put("cargo", worker.getCargo().getMaterial().getSimpleName());
+        }
+
         return jsonWorker;
     }
 
@@ -617,7 +628,23 @@ class Utils {
         jsonFlag.put("id", idManager.getId(flag));
         jsonFlag.put("playerId", idManager.getId(flag.getPlayer()));
 
+        if (!flag.getStackedCargo().isEmpty()) {
+            jsonFlag.put("stackedCargo", cargosToMaterialJson(flag.getStackedCargo()));
+        }
+
         return jsonFlag;
+    }
+
+    private JSONArray cargosToMaterialJson(Collection<Cargo> cargos) {
+        JSONArray jsonMaterial = new JSONArray() ;
+
+        for (Cargo cargo : cargos) {
+            Material material = cargo.getMaterial();
+
+            jsonMaterial.add(material.getSimpleName());
+        }
+
+        return jsonMaterial;
     }
 
     JSONObject roadToJson(Road road) {
@@ -955,7 +982,7 @@ class Utils {
         }
 
         if (!gameChangesList.getNewFlags().isEmpty()) {
-            jsonMonitoringEvents.put("newFlags", newFlagsToJson(gameChangesList.getNewFlags()));
+            jsonMonitoringEvents.put("newFlags", flagsToJson(gameChangesList.getNewFlags()));
         }
 
         if (!gameChangesList.getNewRoads().isEmpty()) {
@@ -980,6 +1007,10 @@ class Utils {
 
         if (!gameChangesList.getChangedBuildings().isEmpty()) {
             jsonMonitoringEvents.put("changedBuildings", changedBuildingsToJson(gameChangesList.getChangedBuildings()));
+        }
+
+        if (!gameChangesList.getChangedFlags().isEmpty()) {
+            jsonMonitoringEvents.put("changedFlags", flagsToJson(gameChangesList.getChangedFlags()));
         }
 
         if (!gameChangesList.getRemovedWorkers().isEmpty()) {
@@ -1268,14 +1299,14 @@ class Utils {
         return jsonNewRoads;
     }
 
-    private JSONArray newFlagsToJson(List<Flag> newFlags) {
-        JSONArray jsonNewFlags = new JSONArray();
+    private JSONArray flagsToJson(Collection<Flag> flags) {
+        JSONArray jsonFlags = new JSONArray();
 
-        for (Flag flag : newFlags) {
-            jsonNewFlags.add(flagToJson(flag));
+        for (Flag flag : flags) {
+            jsonFlags.add(flagToJson(flag));
         }
 
-        return jsonNewFlags;
+        return jsonFlags;
     }
 
     private JSONArray newBuildingsToJson(List<Building> newBuildings) {
@@ -1299,7 +1330,6 @@ class Utils {
                 System.out.println(worker);
             }
 
-            
             jsonWorkerWithNewTarget.put("id", idManager.getId(worker));
             jsonWorkerWithNewTarget.put("path", pointsToJson(worker.getPlannedPath()));
 
@@ -1307,6 +1337,10 @@ class Utils {
             jsonWorkerWithNewTarget.put("y", worker.getPosition().y);
 
             jsonWorkerWithNewTarget.put("type", worker.getClass().getSimpleName());
+
+            if (worker.getCargo() != null) {
+                jsonWorkerWithNewTarget.put("cargo", worker.getCargo().getMaterial().getSimpleName());
+            }
 
             jsonWorkersWithNewTarget.add(jsonWorkerWithNewTarget);
         }
