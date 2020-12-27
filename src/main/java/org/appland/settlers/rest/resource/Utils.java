@@ -14,6 +14,7 @@ import org.appland.settlers.model.Cargo;
 import org.appland.settlers.model.Catapult;
 import org.appland.settlers.model.CoalMine;
 import org.appland.settlers.model.Crop;
+import org.appland.settlers.model.DetailedVegetation;
 import org.appland.settlers.model.DonkeyFarm;
 import org.appland.settlers.model.Farm;
 import org.appland.settlers.model.Fishery;
@@ -247,14 +248,14 @@ class Utils {
 
             for (int y = 1; y < map.getHeight(); y++) {
                 for (int x = start; x + 1 < map.getWidth(); x += 2) {
-                    Point p = new Point(x, y);
+                    Point point = new Point(x, y);
 
-                    Vegetation below = map.getTileBelow(p);
-                    Vegetation belowRight = map.getTileDownRight(p);
+                    DetailedVegetation below = map.getDetailedVegetationBelow(point);
+                    DetailedVegetation downRight = map.getDetailedVegetationDownRight(point);
 
                     jsonTrianglesBelow.add(vegetationToJson(below));
-                    jsonTrianglesBelowRight.add(vegetationToJson(belowRight));
-                    jsonHeights.add(map.getHeightAtPoint(p));
+                    jsonTrianglesBelowRight.add(vegetationToJson(downRight));
+                    jsonHeights.add(map.getHeightAtPoint(point));
                 }
 
                 if (start == 1) {
@@ -268,32 +269,35 @@ class Utils {
         return jsonTerrain;
     }
 
-    private String vegetationToJson(Vegetation v) {
-        switch (v) {
-            case GRASS:
-                return "G";
-            case WATER:
-                return "W";
-            case SWAMP:
-                return "SW";
-            case MOUNTAIN:
-                return "M";
-            case DEEP_WATER:
-                return "DW";
-            case SNOW:
-                return "SN";
-            case LAVA:
-                return "L";
-            case MOUNTAIN_MEADOW:
-                return "MM";
-            case STEPPE:
-                return "ST";
-            case DESERT:
-                return "DE";
-            case SAVANNAH:
-                return "SA";
+    private String vegetationToJson(DetailedVegetation vegetation) {
+        switch (vegetation) {
+            case SAVANNAH:           return "SA";
+            case MOUNTAIN_1:         return "MO1";
+            case SNOW:               return "SN";
+            case SWAMP:              return "SW";
+            case DESERT_1:           return "D1";
+            case WATER:              return "W1";
+            case BUILDABLE_WATER:    return "B";
+            case DESERT_2:           return "D2";
+            case MEADOW_1:           return "ME1";
+            case MEADOW_2:           return "ME2";
+            case MEADOW_3:           return "ME3";
+            case MOUNTAIN_2:         return "MO2";
+            case MOUNTAIN_3:         return "MO3";
+            case MOUNTAIN_4:         return "MO4";
+            case STEPPE:             return "ST";
+            case FLOWER_MEADOW:      return "FM";
+            case LAVA:               return "L1";
+            case MAGENTA:            return "MA";
+            case MOUNTAIN_MEADOW:    return "MM";
+            case WATER_2:            return "W2";
+            case LAVA_2:             return "L2";
+            case LAVA_3:             return "L3";
+            case LAVA_4:             return "L4";
+            case BUILDABLE_MOUNTAIN: return "BM";
+
             default:
-                System.out.println("Cannot handle this vegetation " + v);
+                System.out.println("Cannot handle this vegetation " + vegetation);
                 System.exit(1);
         }
 
