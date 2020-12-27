@@ -1400,6 +1400,7 @@ public class SettlersAPI {
         JSONArray  jsonAnimals               = new JSONArray();
         JSONArray  jsonCrops                 = new JSONArray();
         JSONObject jsonAvailableConstruction = new JSONObject();
+        JSONArray  jsonDeadTrees             = new JSONArray();
 
         view.put("trees", trees);
         view.put("houses", jsonHouses);
@@ -1413,6 +1414,7 @@ public class SettlersAPI {
         view.put("animals", jsonAnimals);
         view.put("crops", jsonCrops);
         view.put("availableConstruction", jsonAvailableConstruction);
+        view.put("deadTrees", jsonDeadTrees);
 
         /* Protect access to the map to avoid interference */
         synchronized (map) {
@@ -1529,6 +1531,11 @@ public class SettlersAPI {
                 }
 
                 jsonCrops.add(utils.cropToJson(crop));
+            }
+
+            /* Fill in dead trees */
+            for (Point point : map.getDeadTrees()) {
+                jsonDeadTrees.add(utils.pointToJson(point));
             }
 
             /* Fill in available construction */
