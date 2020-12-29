@@ -53,7 +53,6 @@ import org.appland.settlers.model.Stone;
 import org.appland.settlers.model.Storehouse;
 import org.appland.settlers.model.StoreHouseIsReadyMessage;
 import org.appland.settlers.model.TransportCategory;
-import org.appland.settlers.model.Vegetation;
 import org.appland.settlers.model.Tree;
 import org.appland.settlers.model.TreeConservationProgramActivatedMessage;
 import org.appland.settlers.model.TreeConservationProgramDeactivatedMessage;
@@ -192,15 +191,6 @@ class Utils {
         hex.insert(0, "#");
 
         return hex.toString();
-    }
-
-    // TODO: remove this if possible
-    public GameMap jsonToGame(JSONObject jsonGame) throws Exception {
-        int width = Integer.parseInt((String) jsonGame.get("width"));
-        int height = Integer.parseInt((String) jsonGame.get("height"));
-        List<Player> players = jsonToPlayers((JSONArray) jsonGame.get("players"));
-
-        return new GameMap(players, width, height);
     }
 
     List<Player> jsonToPlayers(JSONArray jsonPlayers) {
@@ -740,7 +730,7 @@ class Utils {
         if (gamePlaceholder.getPlayers() != null) {
             jsonGamePlaceholder.put("players", playersToJson(gamePlaceholder.getPlayers()));
         } else {
-            jsonGamePlaceholder.put("players", Collections.EMPTY_LIST);
+            jsonGamePlaceholder.put("players", Collections.emptyList());
         }
 
         MapFile mapFile = gamePlaceholder.getMapFile();
@@ -821,7 +811,7 @@ class Utils {
         return map;
     }
 
-    void adjustResources(GameMap map, ResourceLevel resources) throws Exception {
+    void adjustResources(GameMap map, ResourceLevel resources) {
 
         for (Player player : map.getPlayers()) {
 

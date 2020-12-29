@@ -31,28 +31,12 @@ public class GameResource {
         computerPlayers = new ArrayList<>();
     }
 
-    public void setWidth(int width) {
-        this.width = width;
-    }
-
-    public void setHeight(int height) {
-        this.height = height;
-    }
-
     void setPlayers(List<Player> players) {
         this.players.addAll(players);
     }
 
     List<Player> getPlayers() {
         return players;
-    }
-
-    int getHeight() {
-        return height;
-    }
-
-    int getWidth() {
-        return width;
     }
 
     void addHumanPlayer(Player player) {

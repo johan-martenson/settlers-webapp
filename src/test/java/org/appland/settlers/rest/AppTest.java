@@ -79,11 +79,6 @@ public class AppTest extends TestCase {
         RestAssured.basePath = "/settlers/api/";
     }
 
-    @AfterClass
-    public static void tearDownFrontendServer() {
-
-    }
-
     @Test
     public void testAddGame() {
 
@@ -98,7 +93,7 @@ public class AppTest extends TestCase {
                 .statusCode(201)
 
                 /* Verify that the players attribute is an empty list */
-                .body("players", equalTo(Collections.EMPTY_LIST))
+                .body("players", equalTo(Collections.emptyList()))
 
                 .extract().response();
 
@@ -163,7 +158,7 @@ public class AppTest extends TestCase {
                 .statusCode(201)
 
                 /* Verify that the players attribute is an empty list */
-                .body("players", equalTo(Collections.EMPTY_LIST))
+                .body("players", equalTo(Collections.emptyList()))
 
                 /* Verify that tha name is set correctly */
                 .body("name", equalTo("Name of my game"))
@@ -205,7 +200,7 @@ public class AppTest extends TestCase {
                 .statusCode(201)
 
                 /* Verify that the players attribute is an empty list */
-                .body("players", equalTo(Collections.EMPTY_LIST))
+                .body("players", equalTo(Collections.emptyList()))
 
                 .extract().response();
 
@@ -221,7 +216,7 @@ public class AppTest extends TestCase {
         given().contentType(ContentType.JSON).when()
                 .get("/games/{gameId}", jsonResponse.get("id")).then()
                 .statusCode(200)
-                .body("players", equalTo(Collections.EMPTY_LIST));
+                .body("players", equalTo(Collections.emptyList()));
 
         /* Verify that the game exists in the list of games */
         given().contentType(ContentType.JSON).when()
@@ -449,7 +444,7 @@ public class AppTest extends TestCase {
         given().contentType(ContentType.JSON).body(game).when()
                 .post("/games").then()
                 .statusCode(201)
-                .body("players[0].discoveredPoints", equalTo(Collections.EMPTY_LIST));
+                .body("players[0].discoveredPoints", equalTo(Collections.emptyList()));
 
     }
 
@@ -596,7 +591,7 @@ public class AppTest extends TestCase {
                 .statusCode(200)
 
                 /* Verify that the players attribute is an empty list */
-                .body("players", equalTo(Collections.EMPTY_LIST))
+                .body("players", equalTo(Collections.emptyList()))
 
                 /* Verify that the id is correct */
                 .body("id", equalTo(id))

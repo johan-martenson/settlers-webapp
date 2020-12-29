@@ -92,7 +92,6 @@ public class SettlersAPI {
             SWORD,
             SHIELD
     );
-    public static final String ID_MANAGER = "idManager";
 
     @Context
     ServletContext context;
@@ -1108,7 +1107,7 @@ public class SettlersAPI {
 
             if (!building.getPlayer().equals(attackingPlayer)) {
 
-                System.out.println("");
+                System.out.println();
 
                 synchronized (player.getMap()) {
                     attackingPlayer.attack(building, 1);
@@ -1787,7 +1786,7 @@ public class SettlersAPI {
 
         JSONObject jsonBody = (JSONObject) parser.parse(body);
 
-        TransportCategory category = jsonToTransportatCategory((String)jsonBody.get("material"));
+        TransportCategory category = jsonToTransportCategory((String)jsonBody.get("material"));
         int priority = ((Long) jsonBody.get("priority")).intValue();
 
         System.out.println("Material: " + category);
@@ -1802,7 +1801,7 @@ public class SettlersAPI {
         return Response.status(200).entity(jsonTransportPriority.toJSONString()).build();
     }
 
-    private TransportCategory jsonToTransportatCategory(String category) {
+    private TransportCategory jsonToTransportCategory(String category) {
         return TransportCategory.valueOf(category.toUpperCase());
     }
 

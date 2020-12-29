@@ -25,16 +25,12 @@ public class GameTicker {
 
     private static final int COMPUTER_PLAYER_FREQUENCY = 100;
     private static final String FULL_TICK_TIME = "GameTicker.tick.total";
-    private static final String MAP_TICK_TIME = "GameTicker.tick.Map.stepTime";
-    private static final String COMPUTER_PLAYERS_TICK_TIME = "GameTicker.tick.ComputerPlayer.turn";
 
     private final ScheduledExecutorService scheduler;
     private final Set<GameResource> games;
     private final Stats stats;
     ScheduledFuture<?> handle;
     private int counter;
-    private long highestTimeOfMapStepTime;
-    private long highestTimeOfTick;
 
     GameTicker() {
         games = new HashSet<>();
@@ -42,9 +38,6 @@ public class GameTicker {
         scheduler = Executors.newScheduledThreadPool(2);
 
         counter = 0;
-
-        highestTimeOfMapStepTime = 0;
-        highestTimeOfTick = 0;
 
         stats = new Stats();
 
@@ -185,10 +178,6 @@ public class GameTicker {
         200,200, TimeUnit.MILLISECONDS);
     }
 
-    private long getTimestamp() {
-        return (new Date()).getTime();
-    }
-
     public void startGame(GameResource gameResource) {
         games.add(gameResource);
 
@@ -214,7 +203,5 @@ public class GameTicker {
                 headquarter.depositWorker(new Scout(headquarter.getPlayer(), map));
             }
         }
-
-        Stats stats = map.getStats();
     }
 }

@@ -92,9 +92,6 @@ public class WebsocketMonitor implements PlayerGameViewMonitor {
 
                 session.getAsyncRemote().sendText(jsonGameMonitoringEvent.toJSONString());
 
-                //System.out.println(gameChangesList);
-
-                //System.out.println("\nAmount of wild animals: " + player.getMap().getWildAnimals().size() + "\n");
             }
 
         } catch (Exception e) {
