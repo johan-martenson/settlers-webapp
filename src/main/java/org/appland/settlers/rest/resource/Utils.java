@@ -710,7 +710,7 @@ class Utils {
         jsonSign.put("id", idManager.getId(sign));
 
         if (sign.getSize() != null) {
-            jsonSign.put("amount", sign.getSize().toString().toLowerCase());
+            jsonSign.put("amount", sign.getSize().toString().toUpperCase());
         }
 
         return jsonSign;
