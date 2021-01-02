@@ -991,6 +991,10 @@ class Utils {
             jsonMonitoringEvents.put("newTrees", newTreesToJson(gameChangesList.getNewTrees()));
         }
 
+        if (!gameChangesList.getDiscoveredDeadTrees().isEmpty()) {
+            jsonMonitoringEvents.put("discoveredTrees", pointsToJson(gameChangesList.getDiscoveredDeadTrees()));
+        }
+
         if (!gameChangesList.getNewDiscoveredLand().isEmpty()) {
             jsonMonitoringEvents.put("newDiscoveredLand", newDiscoveredLandToJson(gameChangesList.getNewDiscoveredLand()));
         }
@@ -1029,6 +1033,10 @@ class Utils {
 
         if (!gameChangesList.getRemovedTrees().isEmpty()) {
             jsonMonitoringEvents.put("removedTrees", removedTreesToJson(gameChangesList.getRemovedTrees()));
+        }
+
+        if (!gameChangesList.getRemovedDeadTrees().isEmpty()) {
+            jsonMonitoringEvents.put("removedDeadTrees", pointsToJson(gameChangesList.getRemovedDeadTrees()));
         }
 
         if (!gameChangesList.getChangedBorders().isEmpty()) {
