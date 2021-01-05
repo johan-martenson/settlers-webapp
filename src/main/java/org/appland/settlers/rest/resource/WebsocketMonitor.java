@@ -85,13 +85,9 @@ public class WebsocketMonitor implements PlayerGameViewMonitor {
             Session session = sessions.get(player);
 
             if (session != null) {
-
-                //System.out.println("\nView changed");
-
                 JSONObject jsonGameMonitoringEvent = utils.gameMonitoringEventsToJson(gameChangesList, player);
 
                 session.getAsyncRemote().sendText(jsonGameMonitoringEvent.toJSONString());
-
             }
 
         } catch (Exception e) {
