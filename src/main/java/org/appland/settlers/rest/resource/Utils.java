@@ -573,6 +573,9 @@ class Utils {
     JSONObject treeToJson(Tree tree) {
         JSONObject jsonTree = pointToJson(tree.getPosition());
 
+        jsonTree.put("id", idManager.getId(tree));
+        jsonTree.put("type", tree.getTreeType().name().toUpperCase());
+
         return jsonTree;
     }
 
@@ -1245,7 +1248,7 @@ class Utils {
         JSONArray jsonRemovedTrees = new JSONArray();
 
         for (Tree tree : removedTrees) {
-            jsonRemovedTrees.add(pointToJson(tree.getPosition()));
+            jsonRemovedTrees.add(idManager.getId(tree));
         }
 
         return jsonRemovedTrees;
