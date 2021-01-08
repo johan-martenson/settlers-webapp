@@ -587,11 +587,10 @@ class Utils {
         return jsonStone;
     }
 
-
     JSONObject workerToJson(Worker worker) {
         JSONObject jsonWorker = pointToJson(worker.getPosition());
 
-        jsonWorker.put("type", worker.getClass().getSimpleName());
+        jsonWorker.put("type", workerTypeToJson(worker));
         jsonWorker.put("inside", worker.isInsideBuilding());
         jsonWorker.put("betweenPoints", !worker.isExactlyAtPoint());
         jsonWorker.put("id", idManager.getId(worker));
@@ -617,6 +616,14 @@ class Utils {
         }
 
         return jsonWorker;
+    }
+
+    private String rankToTypeString(Military soldier) {
+        String nameAndRank = soldier.getRank().name().toLowerCase();
+
+        int underscorePosition = nameAndRank.indexOf("_");
+
+        return nameAndRank.substring(0, 1).toUpperCase() + nameAndRank.substring(1, underscorePosition);
     }
 
     JSONObject flagToJson(Flag flag) {
@@ -1345,7 +1352,7 @@ class Utils {
             jsonWorkerWithNewTarget.put("x", worker.getPosition().x);
             jsonWorkerWithNewTarget.put("y", worker.getPosition().y);
 
-            jsonWorkerWithNewTarget.put("type", worker.getClass().getSimpleName());
+            jsonWorkerWithNewTarget.put("type", workerTypeToJson(worker));
 
             if (worker.getCargo() != null) {
                 jsonWorkerWithNewTarget.put("cargo", worker.getCargo().getMaterial().getSimpleName());
@@ -1355,6 +1362,17 @@ class Utils {
         }
 
         return jsonWorkersWithNewTarget;
+    }
+
+    private String workerTypeToJson(Worker worker) {
+
+        if (worker.isSoldier()) {
+            Military soldier = (Military) worker;
+
+            return rankToTypeString(soldier);
+        } else {
+            return worker.getClass().getSimpleName();
+        }
     }
 
     public JSONArray transportPriorityToJson(List<TransportCategory> transportPriorityList) {
