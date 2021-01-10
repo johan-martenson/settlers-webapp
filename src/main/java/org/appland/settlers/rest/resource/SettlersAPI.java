@@ -329,6 +329,12 @@ public class SettlersAPI {
                     }
 
                     map.placeBuilding(new Headquarter(players.get(i)), startingPoints.get(i));
+
+                    try {
+                        map.placeDeadTree(startingPoints.get(i).right().right());
+                    } catch (Throwable t) {
+
+                    }
                 }
 
                 /* Adjust the initial set of resources */
@@ -1391,6 +1397,7 @@ public class SettlersAPI {
         JSONArray  trees                     = new JSONArray();
         JSONArray  jsonStones                = new JSONArray();
         JSONArray  jsonWorkers               = new JSONArray();
+        JSONArray  jsonWildAnimals           = new JSONArray();
         JSONArray  jsonFlags                 = new JSONArray();
         JSONArray  jsonRoads                 = new JSONArray();
         JSONArray  jsonDiscoveredPoints      = new JSONArray();
@@ -1405,12 +1412,12 @@ public class SettlersAPI {
         view.put("houses", jsonHouses);
         view.put("stones", jsonStones);
         view.put("workers", jsonWorkers);
+        view.put("wildAnimals", jsonWildAnimals);
         view.put("flags", jsonFlags);
         view.put("roads", jsonRoads);
         view.put("discoveredPoints", jsonDiscoveredPoints);
         view.put("borders", jsonBorders);
         view.put("signs", jsonSigns);
-        view.put("animals", jsonAnimals);
         view.put("crops", jsonCrops);
         view.put("availableConstruction", jsonAvailableConstruction);
         view.put("deadTrees", jsonDeadTrees);
@@ -1518,8 +1525,7 @@ public class SettlersAPI {
                 }
 
                 /* Animal is an extension of worker so the same method is used */
-
-                jsonAnimals.add(utils.workerToJson(animal));
+                jsonWildAnimals.add(utils.wildAnimalToJson(animal));
             }
 
             /* Fill in crops */

@@ -59,6 +59,7 @@ import org.appland.settlers.model.TreeConservationProgramDeactivatedMessage;
 import org.appland.settlers.model.UnderAttackMessage;
 import org.appland.settlers.model.WatchTower;
 import org.appland.settlers.model.Well;
+import org.appland.settlers.model.WildAnimal;
 import org.appland.settlers.model.Woodcutter;
 import org.appland.settlers.model.Worker;
 import org.json.simple.JSONArray;
@@ -597,16 +598,8 @@ class Utils {
 
         if (!worker.isExactlyAtPoint()) {
             jsonWorker.put("previous", pointToJson(worker.getLastPoint()));
-
-            try {
-                jsonWorker.put("next", pointToJson(worker.getNextPoint()));
-
-            } catch(Exception e) {
-                System.out.println("Exception while serializing worker: " + e);
-            }
-
+            jsonWorker.put("next", pointToJson(worker.getNextPoint()));
             jsonWorker.put("percentageTraveled", worker.getPercentageOfDistanceTraveled());
-            jsonWorker.put("speed", 10); // TODO: dynamically look up speed
         } else {
             jsonWorker.put("percentageTraveled", 0);
         }
@@ -983,6 +976,8 @@ class Utils {
 
         if (!gameChangesList.getWorkersWithNewTargets().isEmpty()) {
             jsonMonitoringEvents.put("workersWithNewTargets", workersWithNewTargetsToJson(gameChangesList.getWorkersWithNewTargets()));
+
+            jsonMonitoringEvents.put("wildAnimalsWithNewTargets", wildAnimalsWithNewTargetsToJson(gameChangesList.getWorkersWithNewTargets()));
         }
 
         if (!gameChangesList.getNewBuildings().isEmpty()) {
@@ -1027,6 +1022,8 @@ class Utils {
 
         if (!gameChangesList.getRemovedWorkers().isEmpty()) {
             jsonMonitoringEvents.put("removedWorkers", removedWorkersToJson(gameChangesList.getRemovedWorkers()));
+
+            jsonMonitoringEvents.put("removedWildAnimals", removedWildAnimalsToJson(gameChangesList.getRemovedWorkers()));
         }
 
         if (!gameChangesList.getRemovedBuildings().isEmpty()) {
@@ -1077,6 +1074,36 @@ class Utils {
         }
 
         return jsonMonitoringEvents;
+    }
+
+    private JSONArray removedWildAnimalsToJson(List<Worker> removedWorkers) {
+        JSONArray jsonRemovedWildAnimalIds = new JSONArray();
+
+        for (Worker worker : removedWorkers) {
+            if (! (worker instanceof WildAnimal)) {
+                continue;
+            }
+
+            jsonRemovedWildAnimalIds.add(idManager.getId(worker));
+        }
+
+        return jsonRemovedWildAnimalIds;
+    }
+
+    private JSONArray wildAnimalsWithNewTargetsToJson(List<Worker> workersWithNewTargets) {
+        JSONArray jsonWildAnimals = new JSONArray();
+
+        for (Worker worker : workersWithNewTargets) {
+            if (! (worker instanceof WildAnimal)) {
+                continue;
+            }
+
+            WildAnimal wildAnimal = (WildAnimal) worker;
+
+            jsonWildAnimals.add(wildAnimalToJson(wildAnimal));
+        }
+
+        return jsonWildAnimals;
     }
 
     private JSONArray newStonesToJson(List<Stone> newStones) {
@@ -1292,7 +1319,17 @@ class Utils {
     }
 
     private JSONArray removedWorkersToJson(List<Worker> removedWorkers) {
-        return objectsToJsonIdArray(removedWorkers);
+        JSONArray jsonIdArray = new JSONArray();
+
+        for (Worker worker : removedWorkers) {
+            if (worker instanceof WildAnimal) {
+                continue;
+            }
+
+            jsonIdArray.add(idManager.getId(worker));
+        }
+
+        return jsonIdArray;
     }
 
     private JSONArray objectsToJsonIdArray(List<?> gameObjects) {
@@ -1341,9 +1378,8 @@ class Utils {
         for (Worker worker : workersWithNewTargets) {
             JSONObject jsonWorkerWithNewTarget = new JSONObject();
 
-            if (worker.getPlannedPath().isEmpty()) {
-                System.out.println("EMPTY PATH");
-                System.out.println(worker);
+            if (worker instanceof WildAnimal) {
+                continue;
             }
 
             jsonWorkerWithNewTarget.put("id", idManager.getId(worker));
@@ -1402,5 +1438,27 @@ class Utils {
         Date date = new Date();
         long timeMilli = date.getTime();
         System.out.println(message + ": " + timeMilli);
+    }
+
+    public JSONObject wildAnimalToJson(WildAnimal wildAnimal) {
+        JSONObject jsonWildAnimal = pointToJson(wildAnimal.getPosition());
+
+        jsonWildAnimal.put("type", wildAnimal.getType().name());
+        jsonWildAnimal.put("id", idManager.getId(wildAnimal));
+        jsonWildAnimal.put("betweenPoints", !wildAnimal.isExactlyAtPoint());
+
+        if (wildAnimal.getPlannedPath() != null && wildAnimal.getPlannedPath().size() > 0) {
+            jsonWildAnimal.put("path", pointsToJson(wildAnimal.getPlannedPath()));
+        }
+
+        if (!wildAnimal.isExactlyAtPoint()) {
+            jsonWildAnimal.put("previous", pointToJson(wildAnimal.getLastPoint()));
+            jsonWildAnimal.put("next", pointToJson(wildAnimal.getNextPoint()));
+            jsonWildAnimal.put("percentageTraveled", wildAnimal.getPercentageOfDistanceTraveled());
+        } else {
+            jsonWildAnimal.put("percentageTraveled", 0);
+        }
+
+        return jsonWildAnimal;
     }
 }
