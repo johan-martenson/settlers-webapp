@@ -396,7 +396,9 @@ class Utils {
 
         jsonHouse.put("resources", jsonResources);
 
-        if (building.isUnderConstruction()) {
+        if (building.isPlanned()) {
+            jsonHouse.put("state", "PLANNED");
+        } else if (building.isUnderConstruction()) {
             jsonHouse.put("state", "UNFINISHED");
         } else if (building.isReady() && !building.isOccupied()) {
             jsonHouse.put("state", "UNOCCUPIED");
