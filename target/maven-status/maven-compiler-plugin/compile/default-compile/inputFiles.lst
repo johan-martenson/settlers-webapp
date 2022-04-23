@@ -1,8 +1,8 @@
 /home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/resource/WebsocketMonitor.java
 /home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/DeploymentListener.java
 /home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/GameTicker.java
-/home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/resource/SettlersAPI.java
 /home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/Main.java
+/home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/resource/SettlersAPI.java
 /home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/resource/IdManager.java
 /home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/resource/PATCH.java
 /home/johan/projects/settlers-webapp/src/main/java/org/appland/settlers/rest/resource/MessageResource.java

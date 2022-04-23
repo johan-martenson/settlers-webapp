@@ -82,6 +82,8 @@ public class GameTicker {
                     } catch (Throwable e) {
                         System.out.println("Exception during game loop: " + e);
                         e.printStackTrace();
+                        System.out.println(e.getCause());
+                        System.out.println(map);
                     }
 
                     duration.after("Map.stepTime");

@@ -66,13 +66,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -578,6 +572,7 @@ class Utils {
 
         jsonTree.put("id", idManager.getId(tree));
         jsonTree.put("type", tree.getTreeType().name().toUpperCase());
+        jsonTree.put("size", tree.getSize().name().toUpperCase());
 
         return jsonTree;
     }
@@ -724,6 +719,7 @@ class Utils {
     Object cropToJson(Crop crop) {
         JSONObject jsonCrop = pointToJson(crop.getPosition());
 
+        jsonCrop.put("id", idManager.getId(crop));
         jsonCrop.put("state", "" + crop.getGrowthState());
 
         return jsonCrop;
@@ -1256,7 +1252,7 @@ class Utils {
         JSONArray jsonRemovedCrops = new JSONArray();
 
         for (Crop crop : removedCrops) {
-            jsonRemovedCrops.add(pointToJson(crop.getPosition()));
+            jsonRemovedCrops.add(idManager.getId(crop));
         }
 
         return jsonRemovedCrops;
