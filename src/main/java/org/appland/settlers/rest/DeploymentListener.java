@@ -41,7 +41,8 @@ class DeploymentListener implements ServletContextListener {
         MapLoader mapLoader = new MapLoader();
 
         if (largeMapDirectory.exists()) {
-            for (File mapFilename : largeMapDirectory.listFiles((dir, name) -> name.toLowerCase().endsWith(".swd"))) {
+            for (File mapFilename : largeMapDirectory.listFiles(
+                    (dir, name) -> name.toLowerCase().endsWith(".swd") || name.toLowerCase().endsWith(".wld"))) {
                 try {
                     MapFile mapFile = mapLoader.loadMapFromFile(mapFilename.toString());
                     mapFiles.add(mapFile);

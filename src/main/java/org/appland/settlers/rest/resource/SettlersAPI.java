@@ -607,7 +607,11 @@ public class SettlersAPI {
             return Response.status(404).entity(message.toJSONString()).build();
         }
 
-        JSONObject terrain = utils.terrainToJson(map);
+        JSONObject terrain;
+
+        synchronized (map) {
+            terrain = utils.terrainToJson(map);
+        }
 
         return Response.status(200).entity(terrain.toJSONString()).build();
     }
@@ -1403,7 +1407,6 @@ public class SettlersAPI {
         JSONArray  jsonDiscoveredPoints      = new JSONArray();
         JSONArray  jsonBorders               = new JSONArray();
         JSONArray  jsonSigns                 = new JSONArray();
-        JSONArray  jsonAnimals               = new JSONArray();
         JSONArray  jsonCrops                 = new JSONArray();
         JSONObject jsonAvailableConstruction = new JSONObject();
         JSONArray  jsonDeadTrees             = new JSONArray();

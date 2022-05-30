@@ -227,27 +227,25 @@ class Utils {
 
         int start = 1;
 
-        synchronized (map) {
-            jsonTerrain.put("width", map.getWidth());
-            jsonTerrain.put("height", map.getHeight());
+        jsonTerrain.put("width", map.getWidth());
+        jsonTerrain.put("height", map.getHeight());
 
-            for (int y = 1; y < map.getHeight(); y++) {
-                for (int x = start; x + 1 < map.getWidth(); x += 2) {
-                    Point point = new Point(x, y);
+        for (int y = 1; y < map.getHeight(); y++) {
+            for (int x = start; x + 1 < map.getWidth(); x += 2) {
+                Point point = new Point(x, y);
 
-                    DetailedVegetation below = map.getDetailedVegetationBelow(point);
-                    DetailedVegetation downRight = map.getDetailedVegetationDownRight(point);
+                DetailedVegetation below = map.getDetailedVegetationBelow(point);
+                DetailedVegetation downRight = map.getDetailedVegetationDownRight(point);
 
-                    jsonTrianglesBelow.add(vegetationToJson(below));
-                    jsonTrianglesBelowRight.add(vegetationToJson(downRight));
-                    jsonHeights.add(map.getHeightAtPoint(point));
-                }
+                jsonTrianglesBelow.add(vegetationToJson(below));
+                jsonTrianglesBelowRight.add(vegetationToJson(downRight));
+                jsonHeights.add(map.getHeightAtPoint(point));
+            }
 
-                if (start == 1) {
-                    start = 2;
-                } else {
-                    start = 1;
-                }
+            if (start == 1) {
+                start = 2;
+            } else {
+                start = 1;
             }
         }
 
@@ -602,7 +600,7 @@ class Utils {
         }
 
         if (worker.getCargo() != null) {
-            jsonWorker.put("cargo", worker.getCargo().getMaterial().getSimpleName());
+            jsonWorker.put("cargo", worker.getCargo().getMaterial().getSimpleName().toUpperCase());
         }
 
         return jsonWorker;
@@ -1056,7 +1054,11 @@ class Utils {
         }
 
         if (!gameChangesList.getRemovedCrops().isEmpty()) {
-            jsonMonitoringEvents.put("removedCrops", removedCropsToJson(gameChangesList.getRemovedCrops()));
+            jsonMonitoringEvents.put("removedCrops", cropsToIdJson(gameChangesList.getRemovedCrops()));
+        }
+
+        if (!gameChangesList.getHarvestedCrops().isEmpty()) {
+            jsonMonitoringEvents.put("harvestedCrops", cropsToIdJson(gameChangesList.getHarvestedCrops()));
         }
 
         if (!gameChangesList.getRemovedSigns().isEmpty()) {
@@ -1171,8 +1173,6 @@ class Utils {
         return jsonTreeConservationProgramActivated;
     }
 
-
-
     private JSONArray availableConstructionChangesToJson(Collection<Point> changedAvailableConstruction, Player player) {
         GameMap map = player.getMap();
 
@@ -1248,7 +1248,7 @@ class Utils {
         return jsonSigns;
     }
 
-    private JSONArray removedCropsToJson(List<Crop> removedCrops) {
+    private JSONArray cropsToIdJson(List<Crop> removedCrops) {
         JSONArray jsonRemovedCrops = new JSONArray();
 
         for (Crop crop : removedCrops) {
@@ -1389,7 +1389,7 @@ class Utils {
             jsonWorkerWithNewTarget.put("type", workerTypeToJson(worker));
 
             if (worker.getCargo() != null) {
-                jsonWorkerWithNewTarget.put("cargo", worker.getCargo().getMaterial().getSimpleName());
+                jsonWorkerWithNewTarget.put("cargo", worker.getCargo().getMaterial().getSimpleName().toUpperCase());
             }
 
             jsonWorkersWithNewTarget.add(jsonWorkerWithNewTarget);

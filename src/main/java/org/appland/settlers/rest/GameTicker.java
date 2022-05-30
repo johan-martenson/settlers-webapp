@@ -12,7 +12,6 @@ import org.appland.settlers.utils.Group;
 import org.appland.settlers.utils.Stats;
 import org.appland.settlers.utils.Variable;
 
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
