@@ -13,6 +13,7 @@ import org.appland.settlers.model.BuildingLostMessage;
 import org.appland.settlers.model.Cargo;
 import org.appland.settlers.model.Catapult;
 import org.appland.settlers.model.CoalMine;
+import org.appland.settlers.model.Courier;
 import org.appland.settlers.model.Crop;
 import org.appland.settlers.model.DetailedVegetation;
 import org.appland.settlers.model.DonkeyFarm;
@@ -46,6 +47,7 @@ import org.appland.settlers.model.Point;
 import org.appland.settlers.model.Quarry;
 import org.appland.settlers.model.Road;
 import org.appland.settlers.model.Sawmill;
+import org.appland.settlers.model.Ship;
 import org.appland.settlers.model.Sign;
 import org.appland.settlers.model.Size;
 import org.appland.settlers.model.SlaughterHouse;
@@ -62,6 +64,7 @@ import org.appland.settlers.model.Well;
 import org.appland.settlers.model.WildAnimal;
 import org.appland.settlers.model.Woodcutter;
 import org.appland.settlers.model.Worker;
+import org.appland.settlers.model.WorkerAction;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -590,13 +593,21 @@ class Utils {
         jsonWorker.put("inside", worker.isInsideBuilding());
         jsonWorker.put("betweenPoints", !worker.isExactlyAtPoint());
         jsonWorker.put("id", idManager.getId(worker));
+        jsonWorker.put("direction", worker.getDirection().name().toUpperCase());
 
         if (!worker.isExactlyAtPoint()) {
             jsonWorker.put("previous", pointToJson(worker.getLastPoint()));
             jsonWorker.put("next", pointToJson(worker.getNextPoint()));
             jsonWorker.put("percentageTraveled", worker.getPercentageOfDistanceTraveled());
+            jsonWorker.put("plannedPath", pointsToJson(worker.getPlannedPath()));
         } else {
             jsonWorker.put("percentageTraveled", 0);
+        }
+
+        if (worker instanceof Courier) {
+            Courier courier = (Courier) worker;
+
+            jsonWorker.put("bodyType", courier.getBodyType().name().toUpperCase());
         }
 
         if (worker.getCargo() != null) {
@@ -974,6 +985,20 @@ class Utils {
             jsonMonitoringEvents.put("workersWithNewTargets", workersWithNewTargetsToJson(gameChangesList.getWorkersWithNewTargets()));
 
             jsonMonitoringEvents.put("wildAnimalsWithNewTargets", wildAnimalsWithNewTargetsToJson(gameChangesList.getWorkersWithNewTargets()));
+
+            jsonMonitoringEvents.put("shipsWithNewTargets", shipWithNewTargetsToJson(gameChangesList.getWorkersWithNewTargets()));
+        }
+
+        if (!gameChangesList.getWorkersWithStartedActions().isEmpty()) {
+            jsonMonitoringEvents.put("workersWithStartedActions", workersAndActionsToJson(gameChangesList.getWorkersWithStartedActions()));
+        }
+
+        if (!gameChangesList.getNewShips().isEmpty()) {
+            jsonMonitoringEvents.put("newShips", shipsToJson(gameChangesList.getNewShips()));
+        }
+
+        if (!gameChangesList.getFinishedShips().isEmpty()) {
+            jsonMonitoringEvents.put("finishedShips", shipsToJson(gameChangesList.getFinishedShips()));
         }
 
         if (!gameChangesList.getNewBuildings().isEmpty()) {
@@ -1074,6 +1099,79 @@ class Utils {
         }
 
         return jsonMonitoringEvents;
+    }
+
+    private JSONArray workersAndActionsToJson(Map<Worker, WorkerAction> workersWithStartedActions) {
+        JSONArray workersAndActionsJson = new JSONArray();
+
+        workersWithStartedActions.forEach((worker, action) -> {
+            Point position = worker.getPosition();
+
+            JSONObject jsonWorker = new JSONObject();
+
+            jsonWorker.put("id", idManager.getId(worker));
+            jsonWorker.put("x", position.x);
+            jsonWorker.put("y", position.y);
+            jsonWorker.put("direction", worker.getDirection().name().toUpperCase());
+            jsonWorker.put("startedAction", action.name().toUpperCase());
+
+            workersAndActionsJson.add(jsonWorker);
+        });
+
+        return workersAndActionsJson;
+    }
+
+    private JSONArray shipWithNewTargetsToJson(List<Worker> workers) {
+        JSONArray jsonWorkers = new JSONArray();
+
+        workers.forEach(worker -> {
+            if (worker instanceof Ship) {
+                Ship ship = (Ship) worker;
+
+                jsonWorkers.add(shipToJson(ship));
+            }
+        });
+
+        return jsonWorkers;
+    }
+
+    private JSONObject shipToJson(Ship ship) {
+        JSONObject jsonShip = new JSONObject();
+
+        if (ship.isUnderConstruction()) {
+            jsonShip.put("state", "UNDER_CONSTRUCTION");
+        } else if (ship.isReady()) {
+            jsonShip.put("state", "READY");
+        }
+
+        jsonShip.put("x", ship.getPosition().x);
+        jsonShip.put("y", ship.getPosition().y);
+
+        jsonShip.put("direction", ship.getDirection().name().toUpperCase());
+
+        JSONObject jsonCargos = new JSONObject();
+        Map<Material, Integer> cargos = new HashMap<>();
+
+        for (Cargo cargo : ship.getCargos()) {
+            Material material = cargo.getMaterial();
+            int amount = cargos.getOrDefault(cargo.getMaterial(), 0);
+
+            cargos.put(material, amount + 1);
+        }
+
+        cargos.forEach((material, amount) -> jsonCargos.put(material.name().toUpperCase(), amount));
+
+        jsonShip.put("cargo", jsonCargos);
+
+        return jsonShip;
+    }
+
+    private JSONArray shipsToJson(List<Ship> ships) {
+        JSONArray jsonShips = new JSONArray();
+
+        ships.forEach(ship -> jsonShips.add(shipToJson(ship)));
+
+        return jsonShips;
     }
 
     private JSONArray removedWildAnimalsToJson(List<Worker> removedWorkers) {
@@ -1388,6 +1486,14 @@ class Utils {
 
             jsonWorkerWithNewTarget.put("type", workerTypeToJson(worker));
 
+            jsonWorkerWithNewTarget.put("direction", worker.getDirection().name().toUpperCase());
+
+            if (worker instanceof Courier) {
+                Courier courier = (Courier) worker;
+
+                jsonWorkerWithNewTarget.put("bodyType", courier.getBodyType().name().toUpperCase());
+            }
+
             if (worker.getCargo() != null) {
                 jsonWorkerWithNewTarget.put("cargo", worker.getCargo().getMaterial().getSimpleName().toUpperCase());
             }
@@ -1444,6 +1550,7 @@ class Utils {
         jsonWildAnimal.put("type", wildAnimal.getType().name());
         jsonWildAnimal.put("id", idManager.getId(wildAnimal));
         jsonWildAnimal.put("betweenPoints", !wildAnimal.isExactlyAtPoint());
+        jsonWildAnimal.put("direction", wildAnimal.getDirection().name().toUpperCase());
 
         if (wildAnimal.getPlannedPath() != null && wildAnimal.getPlannedPath().size() > 0) {
             jsonWildAnimal.put("path", pointsToJson(wildAnimal.getPlannedPath()));

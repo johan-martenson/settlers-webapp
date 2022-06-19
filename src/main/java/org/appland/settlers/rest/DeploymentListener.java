@@ -10,6 +10,7 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @WebListener
@@ -41,16 +42,24 @@ class DeploymentListener implements ServletContextListener {
         MapLoader mapLoader = new MapLoader();
 
         if (largeMapDirectory.exists()) {
-            for (File mapFilename : largeMapDirectory.listFiles(
-                    (dir, name) -> name.toLowerCase().endsWith(".swd") || name.toLowerCase().endsWith(".wld"))) {
-                try {
-                    MapFile mapFile = mapLoader.loadMapFromFile(mapFilename.toString());
-                    mapFiles.add(mapFile);
-                } catch (Exception | InvalidMapException e) {
-                    System.out.println(mapFilename.toString());
-                    System.out.println("Exception while loading maps: " + e);
-                }
-            }
+
+            File[] mapFilenames = largeMapDirectory.listFiles(
+                    (dir, name) -> name.toLowerCase().endsWith(".swd") || name.toLowerCase().endsWith(".wld"));
+
+            Arrays.stream(mapFilenames).parallel().forEach(mapFilename ->
+                    {
+                        try {
+                            MapFile mapFile = mapLoader.loadMapFromFile(mapFilename.toString());
+
+                            synchronized (mapFiles) {
+                                mapFiles.add(mapFile);
+                            }
+                        } catch (Exception | InvalidMapException e) {
+                            System.out.println(mapFilename.toString());
+                            System.out.println("Exception while loading maps: " + e);
+                        }
+                    }
+            );
         }
 
         /* Pick the single reference map */
