@@ -15,6 +15,7 @@ import org.appland.settlers.model.Catapult;
 import org.appland.settlers.model.CoalMine;
 import org.appland.settlers.model.Courier;
 import org.appland.settlers.model.Crop;
+import org.appland.settlers.model.DecorationType;
 import org.appland.settlers.model.DetailedVegetation;
 import org.appland.settlers.model.DonkeyFarm;
 import org.appland.settlers.model.Farm;
@@ -91,6 +92,16 @@ class Utils {
 
     Utils(IdManager idManager) {
         this.idManager = idManager;
+    }
+
+    public static JSONObject decorationToJson(DecorationType decorationType, Point point) {
+        JSONObject jsonDecoration = new JSONObject();
+
+        jsonDecoration.put("x", point.x);
+        jsonDecoration.put("y", point.y);
+        jsonDecoration.put("decoration", decorationType.name().toUpperCase());
+
+        return jsonDecoration;
     }
 
     JSONArray gamesToJson(List<GameMap> games) {
@@ -1039,6 +1050,10 @@ class Utils {
 
         if (!gameChangesList.getChangedFlags().isEmpty()) {
             jsonMonitoringEvents.put("changedFlags", flagsToJson(gameChangesList.getChangedFlags()));
+        }
+
+        if (!gameChangesList.getRemovedDecorations().isEmpty()) {
+            jsonMonitoringEvents.put("removedDecorations", pointsToJson(gameChangesList.getRemovedDecorations()));
         }
 
         if (!gameChangesList.getRemovedWorkers().isEmpty()) {

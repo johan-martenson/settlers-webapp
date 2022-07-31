@@ -5,6 +5,7 @@ import org.appland.settlers.model.Building;
 import org.appland.settlers.model.BuildingCapturedMessage;
 import org.appland.settlers.model.BuildingLostMessage;
 import org.appland.settlers.model.Crop;
+import org.appland.settlers.model.DecorationType;
 import org.appland.settlers.model.Flag;
 import org.appland.settlers.model.GameMap;
 import org.appland.settlers.model.GeologistFindMessage;
@@ -1395,7 +1396,7 @@ public class SettlersAPI {
         }
 
         /* Create instances outside the synchronized block when possible */
-        JSONObject view = new JSONObject();
+        JSONObject jsonView = new JSONObject();
 
         JSONArray  jsonHouses                = new JSONArray();
         JSONArray  trees                     = new JSONArray();
@@ -1410,20 +1411,22 @@ public class SettlersAPI {
         JSONArray  jsonCrops                 = new JSONArray();
         JSONObject jsonAvailableConstruction = new JSONObject();
         JSONArray  jsonDeadTrees             = new JSONArray();
+        JSONArray  jsonDecorations           = new JSONArray();
 
-        view.put("trees", trees);
-        view.put("houses", jsonHouses);
-        view.put("stones", jsonStones);
-        view.put("workers", jsonWorkers);
-        view.put("wildAnimals", jsonWildAnimals);
-        view.put("flags", jsonFlags);
-        view.put("roads", jsonRoads);
-        view.put("discoveredPoints", jsonDiscoveredPoints);
-        view.put("borders", jsonBorders);
-        view.put("signs", jsonSigns);
-        view.put("crops", jsonCrops);
-        view.put("availableConstruction", jsonAvailableConstruction);
-        view.put("deadTrees", jsonDeadTrees);
+        jsonView.put("trees", trees);
+        jsonView.put("houses", jsonHouses);
+        jsonView.put("stones", jsonStones);
+        jsonView.put("workers", jsonWorkers);
+        jsonView.put("wildAnimals", jsonWildAnimals);
+        jsonView.put("flags", jsonFlags);
+        jsonView.put("roads", jsonRoads);
+        jsonView.put("discoveredPoints", jsonDiscoveredPoints);
+        jsonView.put("borders", jsonBorders);
+        jsonView.put("signs", jsonSigns);
+        jsonView.put("crops", jsonCrops);
+        jsonView.put("availableConstruction", jsonAvailableConstruction);
+        jsonView.put("deadTrees", jsonDeadTrees);
+        jsonView.put("decorations", jsonDecorations);
 
         /* Protect access to the map to avoid interference */
         synchronized (map) {
@@ -1590,7 +1593,19 @@ public class SettlersAPI {
             }
         }
 
-        return Response.status(200).entity(view.toJSONString()).build();
+        for (Map.Entry<Point, DecorationType> entry : map.getDecorations().entrySet()) {
+            Point point = entry.getKey();
+            DecorationType decorationType = entry.getValue();
+
+            /* Filter points not discovered yet */
+            if (!player.getDiscoveredLand().contains(point)) {
+                continue;
+            }
+
+            jsonDecorations.add(Utils.decorationToJson(decorationType, point));
+        }
+
+        return Response.status(200).entity(jsonView.toJSONString()).build();
     }
 
     @POST
