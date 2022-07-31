@@ -1052,6 +1052,10 @@ class Utils {
             jsonMonitoringEvents.put("changedFlags", flagsToJson(gameChangesList.getChangedFlags()));
         }
 
+        if (!gameChangesList.getNewDecorations().isEmpty()) {
+            jsonMonitoringEvents.put("newDecorations", pointsAndDecorationsToJson(gameChangesList.getNewDecorations()));
+        }
+
         if (!gameChangesList.getRemovedDecorations().isEmpty()) {
             jsonMonitoringEvents.put("removedDecorations", pointsToJson(gameChangesList.getRemovedDecorations()));
         }
@@ -1114,6 +1118,25 @@ class Utils {
         }
 
         return jsonMonitoringEvents;
+    }
+
+    private JSONArray pointsAndDecorationsToJson(Map<Point, DecorationType> pointsAndDecorations) {
+        JSONArray jsonPointsAndDecorations = new JSONArray();
+
+        for (Map.Entry<Point, DecorationType> entry : pointsAndDecorations.entrySet()) {
+            Point point = entry.getKey();
+            DecorationType decorationType = entry.getValue();
+
+            JSONObject pointAndDecorationJson = new JSONObject();
+
+            pointAndDecorationJson.put("x", point.x);
+            pointAndDecorationJson.put("y", point.y);
+            pointAndDecorationJson.put("decoration", decorationType.name().toUpperCase());
+
+            jsonPointsAndDecorations.add(pointAndDecorationJson);
+        }
+
+        return jsonPointsAndDecorations;
     }
 
     private JSONArray workersAndActionsToJson(Map<Worker, WorkerAction> workersWithStartedActions) {
